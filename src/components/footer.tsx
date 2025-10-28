@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 function Footer() {
   return (
     <footer className="w-full bg-gray-800 text-white mt-auto">
@@ -18,10 +20,10 @@ function Footer() {
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-white">Platform</h4>
             <div className="flex flex-col space-y-2">
-              <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Çiftlik Yönetimi</a>
-              <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Atık Yönetimi</a>
-              <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Firma Portalı</a>
-              <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Yönetici Paneli</a>
+              <Link to="/ciftlikler" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Çiftlik Yönetimi</Link>
+              <Link to="/atiklar" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Atık Yönetimi</Link>
+              <Link to="/firmalar" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Firma Portalı</Link>
+              <Link to="/atiklar" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors duration-200">Yönetici Paneli</Link>
             </div>
           </div>
 
