@@ -1,60 +1,36 @@
 import './App.css'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Navbar from './components/navbar'
-import Footer from './components/footer'
-import Anasayfa from './pages/Anasayfa'
-import Giris from './pages/auth/giris'
-import Kayit from './pages/auth/kayit'
-import Atik from './pages/admin/atik'
-import DasSanayi from './pages/admin/das_sanayi'
-import Ciftlik from './pages/ciftlik.tsx'
+import Anasayfa from './pages/Anasayfa.tsx'
+import Giris from './pages/auth/giris.tsx'
+import Kayit from './pages/auth/kayit.tsx'
+import Atik from './pages/admin/atik.tsx'
+import DasSanayi from './pages/admin/das_sanayi.tsx'
 import Firmalar from './pages/firmalar.tsx'
+import FirmaDetay from './pages/firma/firma_detay.tsx'
+import FirmaSatisGecmisi from './pages/firma/firma_satis_gecmisi.tsx'
+import FirmaEkle from './pages/firma/firma_ekle.tsx'
+import Ciftlikler from './pages/ciftlikler.tsx'
+import CiftlikEkle from './pages/ciftlik/ciftlik_ekle.tsx'
+import Atiklar from './pages/atiklar.tsx'
+import AtikEkle from './pages/ciftlik/atik_ekle.tsx'
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Ana sayfa - navbar ve footer ile */}
-        <Route path="/" element={
-          <div className="flex flex-col min-h-screen w-full">
-            <Navbar />
-            <main className="flex-grow w-full">
-              <Anasayfa />
-            </main>
-            <Footer />
-          </div>
-        } />
-        
-        {/* Giriş sayfası - sadece içerik */}
+        <Route path="/" element={<Anasayfa />} />
         <Route path="/giris" element={<Giris />} />
-        
-        {/* Kayıt sayfası - sadece içerik */}
         <Route path="/kayit" element={<Kayit />} />
-        
-        {/* Admin sayfaları */}
         <Route path="/admin/atik" element={<Atik />} />
         <Route path="/admin/sanayi" element={<DasSanayi />} />
-        
-        {/* Diğer sayfalar */}
-        <Route path="/ciftlik" element={
-          <div className="flex flex-col min-h-screen w-full">
-            <Navbar />
-            <main className="flex-grow w-full">
-              <Ciftlik />
-            </main>
-            <Footer />
-          </div>
-        } />
-        
-        <Route path="/firmalar" element={
-          <div className="flex flex-col min-h-screen w-full">
-            <Navbar />
-            <main className="flex-grow w-full">
-              <Firmalar />
-            </main>
-            <Footer />
-          </div>
-        } />
+        <Route path="/ciftlikler" element={<Ciftlikler />} />
+        <Route path="/firmalar" element={<Firmalar />} />
+        <Route path="/firma/detay" element={<FirmaDetay />} />
+        <Route path="/firma/satis-gecmisi" element={<FirmaSatisGecmisi />} />
+        <Route path="/firma/ekle" element={<FirmaEkle />} />
+        <Route path="/ciftlik/ekle" element={<CiftlikEkle />} />
+        <Route path="/atiklar" element={<Atiklar />} />
+        <Route path="/atiklar/ekle" element={<AtikEkle />} />
       </Routes>
     </Router>
   )
