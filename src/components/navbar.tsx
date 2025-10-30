@@ -15,11 +15,9 @@ function Navbar() {
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/">Ana Sayfa</Link>
-              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/ciftlikler">Çiftlik Yönetimi</Link>
-              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/atiklar">Atık Yönetimi</Link>
-              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/admin/sanayi">Sanayi Odası</Link>
-              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/firmalar">Firma Portalı</Link>
-              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/atiklar">Yönetici Paneli</Link>
+              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/ciftlikler">Çiftlikler</Link>
+              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/firmalar">Firmalar</Link>
+              <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/atiklar">Ürünler</Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
