@@ -3,8 +3,11 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Anasayfa from './pages/Anasayfa.tsx'
 import Giris from './pages/auth/giris.tsx'
 import Kayit from './pages/auth/kayit.tsx'
-import Atik from './pages/admin/atik.tsx'
-import DasSanayi from './pages/admin/das_sanayi.tsx'
+import Atik from './pages/admin/ZiraatDasboard/atik.tsx'
+import ZiraatDash from './pages/admin/ZiraatDasboard/ZiraatDash.tsx'
+import UrunOnay from './pages/admin/ZiraatDasboard/UrunOnay.tsx'
+import CiftlikOnay from './pages/admin/ZiraatDasboard/CiftlikOnay.tsx'
+import DasSanayi from './pages/admin/SanayiDasboard/das_sanayi.tsx'
 import Firmalar from './pages/firma/firmalar.tsx'
 import FirmaDetay from './pages/firma/firma_detay.tsx'
 import FirmaSatisGecmisi from './pages/firma/firma_satis_gecmisi.tsx'
@@ -23,6 +26,9 @@ function App() {
         <Route path="/giris" element={<Giris />} />
         <Route path="/kayit" element={<Kayit />} />
         <Route path="/admin/atik" element={<Atik />} />
+        <Route path="/admin/ziraat" element={<ZiraatDash />} />
+        <Route path="/admin/ziraat/urun-onay" element={<UrunOnay />} />
+        <Route path="/admin/ziraat/ciftlik-onay" element={<CiftlikOnay />} />
         <Route path="/admin/sanayi" element={<DasSanayi />} />
         <Route path="/ciftlikler" element={<Ciftlikler />} />
         <Route path="/ciftlik" element={<Ciftlik />} />

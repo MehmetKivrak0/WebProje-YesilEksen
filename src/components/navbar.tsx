@@ -1,7 +1,10 @@
 
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 function Navbar() {
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
       <div className="w-full">
@@ -18,6 +21,61 @@ function Navbar() {
               <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/ciftlikler">Çiftlikler</Link>
               <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/firmalar">Firmalar</Link>
               <Link className="text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors" to="/atiklar">Ürünler</Link>
+              <div
+                className="relative"
+                onMouseEnter={() => setIsAdminMenuOpen(true)}
+                onMouseLeave={() => setIsAdminMenuOpen(false)}
+              >
+                <button
+                  className="flex items-center gap-1 text-sm font-medium text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary transition-colors"
+                  type="button"
+                  onClick={() => setIsAdminMenuOpen((prev) => !prev)}
+                >
+                  Yönetim
+                  <span className="material-symbols-outlined text-base leading-none">
+                    expand_more
+                  </span>
+                </button>
+                {isAdminMenuOpen && (
+                  <div className="absolute left-0 top-full z-20 w-56 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark shadow-lg py-2">
+                    <Link
+                      className="block px-4 py-2 text-sm text-subtle-light dark:text-subtle-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary dark:hover:text-primary transition-colors"
+                      to="/admin/atik"
+                      onClick={() => setIsAdminMenuOpen(false)}
+                    >
+                      Atık Kataloğu
+                    </Link>
+                    <Link
+                      className="block px-4 py-2 text-sm text-subtle-light dark:text-subtle-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary dark:hover:text-primary transition-colors"
+                      to="/admin/ziraat"
+                      onClick={() => setIsAdminMenuOpen(false)}
+                    >
+                      Ziraat Odası Paneli
+                    </Link>
+                    <Link
+                      className="block px-4 py-2 text-sm text-subtle-light dark:text-subtle-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary dark:hover:text-primary transition-colors"
+                      to="/admin/ziraat/urun-onay"
+                      onClick={() => setIsAdminMenuOpen(false)}
+                    >
+                      Ürün Onayları
+                    </Link>
+                    <Link
+                      className="block px-4 py-2 text-sm text-subtle-light dark:text-subtle-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary dark:hover:text-primary transition-colors"
+                      to="/admin/ziraat/ciftlik-onay"
+                      onClick={() => setIsAdminMenuOpen(false)}
+                    >
+                      Çiftlik Onayları
+                    </Link>
+                    <Link
+                      className="block px-4 py-2 text-sm text-subtle-light dark:text-subtle-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary dark:hover:text-primary transition-colors"
+                      to="/admin/sanayi"
+                      onClick={() => setIsAdminMenuOpen(false)}
+                    >
+                      Sanayi Paneli
+                    </Link>
+                  </div>
+                )}
+              </div>
             </nav>
           </div>
           <div className="flex items-center gap-4">
