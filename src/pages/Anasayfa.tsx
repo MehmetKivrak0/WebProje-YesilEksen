@@ -78,16 +78,16 @@ function Anasayfa() {
                 <Link to="/firmalar" className="text-primary font-medium hover:underline">Keşfet →</Link>
               </div>
 
-              {/* Yönetici Paneli Kartı */}
+              {/* Atık Kataloğu Yönetimi Kartı */}
               <div className="bg-background-light dark:bg-background-dark rounded-xl p-6 border border-border-light dark:border-border-dark hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center mb-4">
                   <span className="material-symbols-outlined text-primary text-2xl">admin_panel_settings</span>
                 </div>
-                <h3 className="text-xl font-semibold text-content-light dark:text-content-dark mb-2">Yönetici Paneli</h3>
+                <h3 className="text-xl font-semibold text-content-light dark:text-content-dark mb-2">Atık Kataloğu Yönetimi</h3>
                 <p className="text-subtle-light dark:text-subtle-dark mb-4">
-                  Tarımsal odalar ve organizasyonlar için kapsamlı yönetim araçları.
+                  Ziraat Odası için tarımsal atık kataloğunu ve ürünleri yönetin.
                 </p>
-                <a href="admin/yonetici-paneli.html" className="text-primary font-medium hover:underline">Keşfet →</a>
+                <Link to="/admin/atik" className="text-primary font-medium hover:underline">Keşfet →</Link>
               </div>
 
               {/* Çiftlik Keşfetme Kartı */}
