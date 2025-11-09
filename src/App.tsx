@@ -7,6 +7,7 @@ import Atik from './pages/admin/ZiraatDasboard/atik.tsx'
 import ZiraatDash from './pages/admin/ZiraatDasboard/ZiraatDash.tsx'
 import UrunOnay from './pages/admin/ZiraatDasboard/UrunOnay.tsx'
 import CiftlikOnay from './pages/admin/ZiraatDasboard/CiftlikOnay.tsx'
+import CiftlikDetay from './pages/admin/ZiraatDasboard/ciftlikDetay.tsx'
 import DasSanayi from './pages/admin/SanayiDasboard/das_sanayi.tsx'
 import Firmalar from './pages/firma/firmalar.tsx'
 import FirmaDetay from './pages/firma/firma_detay.tsx'
@@ -29,6 +30,7 @@ function App() {
         <Route path="/admin/ziraat" element={<ZiraatDash />} />
         <Route path="/admin/ziraat/urun-onay" element={<UrunOnay />} />
         <Route path="/admin/ziraat/ciftlik-onay" element={<CiftlikOnay />} />
+        <Route path="/admin/ziraat/ciftlik-detay/:farmerId" element={<CiftlikDetay />} />
         <Route path="/admin/sanayi" element={<DasSanayi />} />
         <Route path="/ciftlikler" element={<Ciftlikler />} />
         <Route path="/ciftlik" element={<Ciftlik />} />

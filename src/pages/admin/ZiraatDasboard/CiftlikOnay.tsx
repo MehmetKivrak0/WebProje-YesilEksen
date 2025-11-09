@@ -271,7 +271,7 @@ function CiftlikOnay() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button className="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-dark px-3 py-2 text-sm hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors">
+                <button className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-primary/40 dark:hover:bg-primary/30">
                   <span className="material-symbols-outlined text-base">event</span>
                   Denetim Planı Oluştur
                 </button>
@@ -317,16 +317,16 @@ function CiftlikOnay() {
                       <td className="px-6 py-4 text-right">
                         <div className="inline-flex items-center gap-2">
                           <button
-                            className="rounded-full border border-primary px-4 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/10 dark:hover:bg-primary/20"
+                            className="rounded-full border border-primary/40 bg-primary/10 px-4 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-primary/40 dark:hover:bg-primary/30"
                             onClick={() => setInspectedApplication(farm)}
                           >
                             İncele
                           </button>
-                          <button className="rounded-full bg-gray-900 px-4 py-1 text-sm font-medium text-green-500 transition-colors hover:bg-gray-800">
+                          <button className="rounded-full bg-green-600 px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-green-500 dark:hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600">
                             Onayla
                           </button>
                           <button
-                            className="rounded-full bg-gray-900 px-4 py-1 text-sm font-medium text-red-500 transition-colors hover:bg-gray-800"
+                            className="rounded-full bg-red-600 px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-red-500 dark:hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
                             onClick={() => setRejectedApplication(farm)}
                           >
                             Reddet
