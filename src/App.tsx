@@ -14,7 +14,7 @@ import FirmaDetay from './pages/firma/firma_detay.tsx'
 import FirmaSatisGecmisi from './pages/firma/firma_satis_gecmisi.tsx'
 import FirmaEkle from './pages/firma/firma_ekle.tsx'
 import Ciftlikler from './pages/ciftlik/ciftlikler.tsx'
-import Ciftlik from './pages/ciftlik/ciftlik.tsx'
+import CitflitAdmin from './pages/admin/ZiraatDasboard/citflit.tsx'
 import CiftlikEkle from './pages/ciftlik/ciftlik_ekle.tsx'
 import Atiklar from './pages/atiklar.tsx'
 import AtikEkle from './pages/ciftlik/atik_ekle.tsx'
@@ -33,7 +33,7 @@ function App() {
         <Route path="/admin/ziraat/ciftlik-detay/:farmerId" element={<CiftlikDetay />} />
         <Route path="/admin/sanayi" element={<DasSanayi />} />
         <Route path="/ciftlikler" element={<Ciftlikler />} />
-        <Route path="/ciftlik" element={<Ciftlik />} />
+        <Route path="/admin/ziraat/ciftlik" element={<CitflitAdmin />} />
         <Route path="/firmalar" element={<Firmalar />} />
         <Route path="/firma/detay" element={<FirmaDetay />} />
         <Route path="/firma/satis-gecmisi" element={<FirmaSatisGecmisi />} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../../../components/navbar';
+import ZrtnNavbar from '../../../components/zrtnavbar';
 
 const productSummary = {
   pending: 12,
@@ -282,7 +282,7 @@ function ZiraatDash() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark font-display text-content-light dark:text-content-dark">
-      <Navbar />
+      <ZrtnNavbar />
 
       <main className="flex-grow">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -295,39 +295,7 @@ function ZiraatDash() {
                 Çiftçileri ve çiftlik faaliyetlerini yönetin
               </p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <Link
-                to="/admin/atik"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
-              >
-                <span className="material-symbols-outlined text-base">recycling</span>
-                Atık Kataloğu
-              </Link>
-              <div className="relative inline-flex group">
-                <button
-                  type="button"
-                  className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-light bg-background-light px-5 py-3 text-sm font-semibold text-content-light shadow-sm transition-colors hover:border-primary hover:text-primary dark:border-border-dark dark:bg-background-dark dark:text-content-dark dark:hover:border-primary dark:hover:text-primary"
-                >
-                  <span className="material-symbols-outlined text-base">summarize</span>
-                  Raporlar
-                  <span className="material-symbols-outlined text-base leading-none">expand_more</span>
-                </button>
-                <div className="absolute right-0 top-full z-10 hidden min-w-[180px] rounded-xl border border-border-light bg-background-light p-2 shadow-xl group-hover:flex group-hover:flex-col group-focus-within:flex dark:border-border-dark dark:bg-background-dark">
-                  <Link
-                    to="/admin/ziraat/raporlar/genel"
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-content-light transition-colors hover:bg-primary/10 hover:text-primary dark:text-content-dark dark:hover:bg-primary/20 dark:hover:text-primary"
-                  >
-                    Genel
-                  </Link>
-                  <Link
-                    to="/admin/ziraat/raporlar/sdk"
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-content-light transition-colors hover:bg-primary/10 hover:text-primary dark:text-content-dark dark:hover:bg-primary/20 dark:hover:text-primary"
-                  >
-                    SDK
-                  </Link>
-                </div>
-              </div>
-            </div>
+            
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

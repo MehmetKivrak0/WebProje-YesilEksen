@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import Navbar from '../../../components/navbar';
+import ZrtnNavbar from '../../../components/zrtnavbar';
 
 type DocumentStatus = 'Onaylandı' | 'Eksik' | 'Beklemede' | 'Reddedildi';
 type FarmStatus = 'Onaylandı' | 'Denetimde' | 'Evrak Bekliyor' | 'İlk İnceleme';
@@ -206,7 +206,7 @@ function CiftlikOnay() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark font-display text-content-light dark:text-content-dark">
-      <Navbar />
+      <ZrtnNavbar />
 
       <main className="flex-grow">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -274,10 +274,6 @@ function CiftlikOnay() {
                 <button className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-primary/40 dark:hover:bg-primary/30">
                   <span className="material-symbols-outlined text-base">event</span>
                   Denetim Planı Oluştur
-                </button>
-                <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors">
-                  <span className="material-symbols-outlined text-base">add_business</span>
-                  Yeni Başvuru Kaydı
                 </button>
               </div>
             </div>
