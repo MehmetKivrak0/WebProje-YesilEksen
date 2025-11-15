@@ -24,6 +24,12 @@ function Anasayfa() {
                 <Link to="/firmalar" className="bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark px-8 py-3 rounded-lg font-semibold border border-border-light dark:border-border-dark hover:bg-primary/10 transition-colors">
                   Firma Portalı
                 </Link>
+                <Link
+                  to="/admin/sanayi"
+                  className="bg-primary/90 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary transition-colors"
+                >
+                  Yönetici Paneli
+                </Link>
               </div>
             </div>
           </div>

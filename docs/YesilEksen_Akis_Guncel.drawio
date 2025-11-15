@@ -1,0 +1,303 @@
+<mxfile host="app.diagrams.net" modified="2025-11-12T00:00:00.000Z" agent="Mozilla/5.0 (Assistant) drawio/24.7.7" version="24.7.7" editor="assistant" type="device">
+  <diagram id="yesileksen-akis" name="Akış">
+    <mxGraphModel dx="1920" dy="1080" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Başlangıç ve bootstrap -->
+        <mxCell id="start" value="Uygulama Başlar" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="indexHtml" value="index.html" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2470a0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="260" y="60" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="mainTsx" value="src/main.tsx&#10;React root oluşturur" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2470a0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="60" width="220" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="appTsx" value="src/App.tsx&#10;Router &amp; Routes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2470a0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="720" y="60" width="220" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="anasayfa" value="Anasayfa (&#34;/&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="980" y="60" width="220" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges bootstrap -->
+        <mxCell id="e1" edge="1" parent="1" source="start" target="indexHtml">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="indexHtml" target="mainTsx">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="mainTsx" target="appTsx">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="appTsx" target="anasayfa">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Auth -->
+        <mxCell id="giris" value="Giriş (&#34;/giris&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="860" y="160" width="200" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="kayit" value="Kayıt (&#34;/kayit&#34;)&#10;Çok adımlı form" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="160" width="210" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="anasayfa" target="giris">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="anasayfa" target="kayit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="giris" target="kayit" style="dashed=1;strokeColor=#d79b00;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1040" y="187" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Kayıt adımları -->
+        <mxCell id="k1" value="Adım 1: Hesap Bilgileri&#10;(Tür seçimi: Çiftçi/Şirket)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="240" width="270" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="kdec" value="Tür?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1145" y="320" width="100" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="k2a" value="Adım 2: Çiftlik Bilgileri&#10;+ Atık Türleri" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="980" y="410" width="230" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="k2b" value="Adım 2: Şirket Bilgileri" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="410" width="230" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="k3" value="Adım 3: Belgeler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1105" y="500" width="180" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="k4" value="Adım 4: Özet &amp; Onay" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1105" y="580" width="180" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="kayit" target="k1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="k1" target="kdec">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="kdec" target="k2a">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1100" y="385"/></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="kdec" target="k2b">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1290" y="385"/></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="k2a" target="k3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="k2b" target="k3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="k3" target="k4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Kayıt sonrası navigasyon -->
+        <mxCell id="kOk" value="Kayıt Tamamlandı" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1105" y="660" width="180" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="k4" target="kOk">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Çiftçi Portalı grubu -->
+        <mxCell id="grpFarmer" value="Çiftçi Portalı" style="swimlane;startSize=26;rounded=1;html=1;fillColor=#f9f9f9;strokeColor=#7ea6e0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="260" width="430" height="360" as="geometry"/>
+        </mxCell>
+        <mxCell id="ciftlikler" value="Çiftlikler (&#34;/ciftlikler&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="grpFarmer">
+          <mxGeometry x="20" y="40" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ciftlikDetay" value="Çiftlik Detay (&#34;/ciftlik/detay/:id&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="grpFarmer">
+          <mxGeometry x="240" y="40" width="170" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ciftciPanel" value="Çiftçi Panel (&#34;/ciftlik/panel&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="grpFarmer">
+          <mxGeometry x="20" y="110" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="urunlerim" value="Ürünlerim (&#34;/ciftlik/urunlerim&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="grpFarmer">
+          <mxGeometry x="240" y="110" width="170" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="satisGecmisiC" value="Satış Geçmişi (&#34;/ciftlik/satis-gecmisi&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="grpFarmer">
+          <mxGeometry x="20" y="180" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="profilC" value="Profil (&#34;/ciftlik/profil&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="grpFarmer">
+          <mxGeometry x="240" y="180" width="170" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="atikEkle" value="Atık Ekle (&#34;/atiklar/ekle&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="grpFarmer">
+          <mxGeometry x="20" y="250" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Firma Portalı grubu -->
+        <mxCell id="grpFirma" value="Firma Portalı" style="swimlane;startSize=26;rounded=1;html=1;fillColor=#f9f9f9;strokeColor=#7ea6e0;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="640" width="430" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="firmalar" value="Firmalar (&#34;/firmalar&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="grpFirma">
+          <mxGeometry x="20" y="40" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="firmaDetay" value="Firma Detay (&#34;/firma/detay/:id&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="grpFirma">
+          <mxGeometry x="240" y="40" width="170" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="firmaEkle" value="Firma Ekle (&#34;/firma/ekle&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="grpFirma">
+          <mxGeometry x="20" y="110" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="firmaPanel" value="Firma Panel (&#34;/firma/panel&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="grpFirma">
+          <mxGeometry x="240" y="110" width="170" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="satisGecmisiF" value="Satış Geçmişi (&#34;/firma/satis-gecmisi&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="grpFirma">
+          <mxGeometry x="20" y="180" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="profilF" value="Profil (&#34;/firma/profil&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="grpFirma">
+          <mxGeometry x="240" y="180" width="170" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Anasayfa menü çıkışları -->
+        <mxCell id="atiklar" value="Atıklar (&#34;/atiklar&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="760" y="160" width="90" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="anasayfa" target="atiklar">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="anasayfa" target="ciftlikler">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="anasayfa" target="firmalar">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e19" edge="1" parent="1" source="kOk" target="ciftlikler" style="dashed=1;strokeColor=#82b366;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e20" edge="1" parent="1" source="kOk" target="firmalar" style="dashed=1;strokeColor=#82b366;">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Ziraat Admin grubu -->
+        <mxCell id="grpZiraat" value="Ziraat Admin" style="swimlane;startSize=26;rounded=1;html=1;fillColor=#f9f9f9;strokeColor=#60a917;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="60" width="360" height="420" as="geometry"/>
+        </mxCell>
+        <mxCell id="ziraatDash" value="Dashboard (&#34;/admin/ziraat&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="grpZiraat">
+          <mxGeometry x="20" y="40" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="urunOnay" value="Ürün Onayları (&#34;/admin/ziraat/urun-onay&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="grpZiraat">
+          <mxGeometry x="20" y="100" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ciftlikOnay" value="Çiftlik Onayları (&#34;/admin/ziraat/ciftlik-onay&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="grpZiraat">
+          <mxGeometry x="20" y="160" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="ciftlikDetayAdmin" value="Çiftlik Detay (&#34;/admin/ziraat/ciftlik-detay/:farmerId&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="grpZiraat">
+          <mxGeometry x="20" y="220" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="raporGenelZ" value="Genel Rapor (&#34;/admin/ziraat/raporlar/genel&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="grpZiraat">
+          <mxGeometry x="20" y="280" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="raporSdgZ" value="SDG Raporu (&#34;/admin/ziraat/raporlar/sdg&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="grpZiraat">
+          <mxGeometry x="20" y="340" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="atikAdmin" value="Atık Yönetimi (&#34;/admin/atik&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="grpZiraat">
+          <mxGeometry x="20" y="400" width="220" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="e21" edge="1" parent="1" source="anasayfa" target="ziraatDash">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Sanayi Admin grubu -->
+        <mxCell id="grpSanayi" value="Sanayi Admin" style="swimlane;startSize=26;rounded=1;html=1;fillColor=#f9f9f9;strokeColor=#60a917;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="520" width="360" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="sanayiMain" value="Sanayi Ana Sayfa (&#34;/admin/sanayi&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f2ff;strokeColor=#4d89f9;fontSize=12;" vertex="1" parent="grpSanayi">
+          <mxGeometry x="20" y="40" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="firmaOnaylari" value="Firma Onayları (&#34;/admin/sanayi/firma-onaylari&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f2ff;strokeColor=#4d89f9;fontSize=12;" vertex="1" parent="grpSanayi">
+          <mxGeometry x="20" y="100" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="uyeSirketler" value="Üye Şirketler (&#34;/admin/sanayi/uye-sirketler&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f2ff;strokeColor=#4d89f9;fontSize=12;" vertex="1" parent="grpSanayi">
+          <mxGeometry x="20" y="160" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="raporGenelS" value="Genel Rapor (&#34;/admin/sanayi/raporlar/genel&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f2ff;strokeColor=#4d89f9;fontSize=12;" vertex="1" parent="grpSanayi">
+          <mxGeometry x="20" y="220" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="raporSdgS" value="SDG Raporu (&#34;/admin/sanayi/raporlar/sdg&#34;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f2ff;strokeColor=#4d89f9;fontSize=12;" vertex="1" parent="grpSanayi">
+          <mxGeometry x="20" y="260" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="e22" edge="1" parent="1" source="anasayfa" target="sanayiMain">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Bağlantılar (iç) -->
+        <mxCell id="e23" edge="1" parent="grpFarmer" source="ciftlikler" target="ciftlikDetay">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e24" edge="1" parent="grpFarmer" source="ciftlikler" target="ciftciPanel">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e25" edge="1" parent="grpFarmer" source="ciftciPanel" target="urunlerim">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e26" edge="1" parent="grpFarmer" source="ciftciPanel" target="satisGecmisiC">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e27" edge="1" parent="grpFarmer" source="ciftciPanel" target="profilC">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e28" edge="1" parent="grpFarmer" source="ciftciPanel" target="atikEkle">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e29" edge="1" parent="grpFirma" source="firmalar" target="firmaDetay">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e30" edge="1" parent="grpFirma" source="firmalar" target="firmaEkle">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e31" edge="1" parent="grpFirma" source="firmaPanel" target="satisGecmisiF">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e32" edge="1" parent="grpFirma" source="firmaPanel" target="profilF">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e33" edge="1" parent="grpZiraat" source="ziraatDash" target="urunOnay">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e34" edge="1" parent="grpZiraat" source="ziraatDash" target="ciftlikOnay">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e35" edge="1" parent="grpZiraat" source="ciftlikOnay" target="ciftlikDetayAdmin">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e36" edge="1" parent="grpZiraat" source="ziraatDash" target="raporGenelZ">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e37" edge="1" parent="grpZiraat" source="ziraatDash" target="raporSdgZ">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e38" edge="1" parent="grpZiraat" source="ziraatDash" target="atikAdmin">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e39" edge="1" parent="grpSanayi" source="sanayiMain" target="firmaOnaylari">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e40" edge="1" parent="grpSanayi" source="sanayiMain" target="uyeSirketler">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e41" edge="1" parent="grpSanayi" source="sanayiMain" target="raporGenelS">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e42" edge="1" parent="grpSanayi" source="sanayiMain" target="raporSdgS">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+
+
+
+

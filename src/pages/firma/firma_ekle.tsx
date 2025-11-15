@@ -1,10 +1,10 @@
-import Navbar from '../../components/navbar';
+import FrmNavbar from '../../components/frmnavbar';
 import Footer from '../../components/footer';
 
 function FirmaEkle() {
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-stone-900 dark:text-stone-100 min-h-screen flex flex-col">
-      <Navbar />
+      <FrmNavbar />
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-3xl mx-auto">
           <div className="mb-8">

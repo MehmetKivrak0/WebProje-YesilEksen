@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import Navbar from '../../../components/navbar';
+import Navbar from '../../../../components/navbar';
 
 type ProductStatus = 'Aktif' | 'Beklemede' | 'Taslak';
 
@@ -99,7 +99,7 @@ const initialDeleteModalState: DeleteModalState = {
   error: null,
 };
 
-function Atik() {
+function WasteManagementPage() {
   const [products, setProducts] = useState<ProductRow[]>(initialProductRows);
   const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
   const [statusModal, setStatusModal] = useState<StatusModalState>(initialStatusModalState);
@@ -593,5 +593,5 @@ function Atik() {
   );
 }
 
-export default Atik;
+export default WasteManagementPage;
 

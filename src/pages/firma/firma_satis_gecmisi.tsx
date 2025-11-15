@@ -1,10 +1,10 @@
-import Navbar from '../../components/navbar';
+import FrmNavbar from '../../components/frmnavbar';
 import Footer from '../../components/footer';
 
 function FirmaSatisGecmisi() {
   return (
     <div className="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col">
-      <Navbar />
+      <FrmNavbar />
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">

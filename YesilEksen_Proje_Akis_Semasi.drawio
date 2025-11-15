@@ -1,0 +1,416 @@
+<mxfile host="app.diagrams.net" modified="2024-01-20T12:00:00.000Z" agent="5.0" version="22.1.16">
+  <diagram name="Yeşil Eksen - İş Akışı" id="main-flow">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Proje Başlangıcı -->
+        <mxCell id="start" value="Proje Başla" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="40" width="140" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Head Org -->
+        <mxCell id="head-org" value="Head Org" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="710" y="140" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="start" target="head-org">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Giriş Başarılı mı? -->
+        <mxCell id="login-check" value="Giriş Başarılı mı?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="695" y="220" width="150" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="head-org" target="login-check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Geri Dönüş (Sol) -->
+        <mxCell id="return-left" value="Geri Dönüş" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="240" width="100" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-return" value="Hayır" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;" edge="1" parent="1" source="login-check" target="return-left">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Ana Panel Dashboard -->
+        <mxCell id="main-dashboard" value="Ana Panel&#xa;Dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ba1e2;strokeColor=#006EAF;fontColor=#ffffff;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="710" y="360" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge3" value="Evet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;" edge="1" parent="1" source="login-check" target="main-dashboard">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Sol Taraf: Kayıt ve Giriş İşlemleri -->
+        <mxCell id="kayit-ekrani" value="Kayıt Ekle Butonu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="120" y="240" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="form-ekrani" value="Form Ekranı (Kayıt)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ba1e2;strokeColor=#006EAF;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="120" y="320" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-kayit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="kayit-ekrani" target="form-ekrani">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="atik-kosullar" value="Atık Koşulları Seçimi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="260" y="320" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-kosul" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="form-ekrani" target="atik-kosullar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- İş Birimi Onayı -->
+        <mxCell id="is-birimi-onay" value="İş Birimi Onayı&#xa;Seçimi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="260" y="400" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-birim" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="atik-kosullar" target="is-birimi-onay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- EC Çöl Havuzu Durumu Seçimi -->
+        <mxCell id="ec-col-havuz" value="EC Çöl Havuzu Durumu&#xa;(Var = Biyometre Seçi...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="260" y="480" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-ec1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="is-birimi-onay" target="ec-col-havuz">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- EC Çöl Havuzu Durumu (Yok = Biyometre Seçi...) -->
+        <mxCell id="ec-col-havuz-2" value="EC Çöl Havuzu Durumu&#xa;(Yok = Biyometre Seçi...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="260" y="570" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-ec2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ec-col-havuz" target="ec-col-havuz-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Ön Belge Analiz Aşaması -->
+        <mxCell id="on-belge" value="Ön Belge Analiz&#xa;Aşaması" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="260" y="660" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-on-belge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ec-col-havuz-2" target="on-belge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Veritabanı - Sorgu/İnceleme İşlemleri -->
+        <mxCell id="db-sorgu" value="Sorgu/İnceleme&#xa;İşlemleri" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="140" y="410" width="80" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Atık Koşulları Eşleri -->
+        <mxCell id="atik-kosul-esler" value="Atık Koşulları Eşleri" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="120" y="520" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-atik-esler" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="db-sorgu" target="atik-kosul-esler">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- İş Birimi İle Eşli Kayıt -->
+        <mxCell id="is-birim-kayit" value="İş Birimi İle Eşli&#xa;Kayıt" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="120" y="600" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-is-kayit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="atik-kosul-esler" target="is-birim-kayit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Kimlik Doğrulama İşlemleri (DB) -->
+        <mxCell id="db-kimlik" value="Kimlik&#xa;Doğrulama&#xa;İşlemleri" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="30" y="660" width="80" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Sağ Alt: Belge/Form Kontrolleri -->
+        <mxCell id="form-kontrolu" value="Form Kontrolü &amp;&#xa;Bergeler Seçim" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="260" y="750" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-form-kontrol" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="on-belge" target="form-kontrolu">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Form Kontrolü Sonucu -->
+        <mxCell id="form-karar" value="Form Kaydet &amp;&#xa;Paylaş Seçimi" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="265" y="830" width="100" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-form-karar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="form-kontrolu" target="form-karar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Belge Kayıt Hatası (Sol) -->
+        <mxCell id="belge-hata" value="Belge Kayıt Hatası" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="120" y="845" width="110" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-hata" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#b85450;" edge="1" parent="1" source="form-karar" target="belge-hata">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Database - Error -->
+        <mxCell id="db-error" value="Error" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="135" y="930" width="80" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-db-error" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="belge-hata" target="db-error">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Merkez Akış: Dashboard'dan devam -->
+        <!-- Kayıt Başarılı -->
+        <mxCell id="kayit-basarili" value="Kayıt&#xa;Başarılı" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="395" y="840" width="90" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-basarili" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;" edge="1" parent="1" source="form-karar" target="kayit-basarili">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Admin/Platform/Veriler İşlem Tarafı (Sağ) -->
+        <!-- Kaydet Güncelleyin Butonu -->
+        <mxCell id="kaydet-guncelle" value="Kaydet Güncelleyin&#xa;Butonu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="900" y="240" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-kaydet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;exitX=1;exitY=0.5;" edge="1" parent="1" source="login-check" target="kaydet-guncelle">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Koşullardan Ürün Listeyi Çek -->
+        <mxCell id="koşul-urun-list" value="Koşullardan Ürün&#xa;Listeyi Çek" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ba1e2;strokeColor=#006EAF;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="320" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-urun-list" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="kaydet-guncelle" target="koşul-urun-list">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Atık Platform Formu -->
+        <mxCell id="atik-platform" value="Atık Platform Formu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ba1e2;strokeColor=#006EAF;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="360" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-platform" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="main-dashboard" target="atik-platform">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Atık Koşulları Seçimi (Sağ) -->
+        <mxCell id="atik-kosul-sec" value="Atık Koşulları Seçimi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="440" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-kosul-sec" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="atik-platform" target="atik-kosul-sec">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Firmam = Borçma Olma -->
+        <mxCell id="firma-borcma" value="Firmam = Borçma Olma" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="520" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-firma" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="atik-kosul-sec" target="firma-borcma">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Sırala Miktar/Çevreye Zararı + İş Bağı % 100 = işl -->
+        <mxCell id="sirala-miktar" value="Sırala Miktar/Çevreye&#xa;Zararı + İş Bağı % 100 = işl" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="600" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-sirala" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="firma-borcma" target="sirala-miktar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Sırala Miktar/Çevreye Zararı + İş Bağı % 100 < işl -->
+        <mxCell id="sirala-miktar-2" value="Sırala Miktar/Çevreye&#xa;Zararı + İş Bağı % 100 &lt; işl" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="690" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-sirala-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sirala-miktar" target="sirala-miktar-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Atık Eşleme Algoritması -->
+        <mxCell id="atik-esleme" value="Atık Eşleme&#xa;Algoritması" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="360" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-esleme" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="atik-platform" target="atik-esleme">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Atık Koşulları Eşleri (Sağ DB) -->
+        <mxCell id="atik-kosul-db" value="Atık Koşulları&#xa;Eşleri" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="440" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-kosul-db" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="atik-esleme" target="atik-kosul-db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- İş Birimi Koşulları Eşleri -->
+        <mxCell id="is-birim-esler" value="İş Birimi Koşulları&#xa;Eşleri" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="520" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-is-esler" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="atik-kosul-db" target="is-birim-esler">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Karar: Algılanma İşlemi -->
+        <mxCell id="algilama" value="Algılanma?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="600" width="100" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-algilama" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="is-birim-esler" target="algilama">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Exit -->
+        <mxCell id="exit" value="Exit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="615" width="80" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-exit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="algilama" target="exit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Karşıl Bulunur İletişim -->
+        <mxCell id="karsil-iletisim" value="Karşıl Bulunur&#xa;İletişim" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="710" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-karsil" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="algilama" target="karsil-iletisim">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Anlaşmaya Varırsa İşlemler -->
+        <mxCell id="anlasma-db" value="Anlaşmaya&#xa;Varırsa" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="700" width="80" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-anlasma" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="karsil-iletisim" target="anlasma-db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Alt Merkez: Ödeme ve Faturalama -->
+        <!-- Ayın Faturalama İşlemi -->
+        <mxCell id="fatura-islem" value="Ayın Faturalama&#xa;İşlemi Duruma Göre" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="520" y="550" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-fatura" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="main-dashboard" target="fatura-islem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Ödeme Hesaplandıdan İşlem Çalışları İle -->
+        <mxCell id="odeme-hesap" value="Ödeme Hesaplandıdan&#xa;İşlem Çalışları İle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="520" y="630" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-odeme" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="fatura-islem" target="odeme-hesap">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Fatura -->
+        <mxCell id="fatura-doc" value="Fatura" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="540" y="710" width="80" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-fatura-doc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="odeme-hesap" target="fatura-doc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Ödeme Hesaplanmalıdan İşlem Durumu İle -->
+        <mxCell id="odeme-durum" value="Ödeme Hesaplanmalıdan&#xa;İşlem Durumu İle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="520" y="790" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-durum" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="fatura-doc" target="odeme-durum">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Ödeme İşle Depolanan İşlem Durumulması İle -->
+        <mxCell id="odeme-isle-depola" value="Ödeme İşle Depolanan&#xa;İşlem Durumulması İle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="520" y="870" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-isle-depola" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="odeme-durum" target="odeme-isle-depola">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Ödeme Database -->
+        <mxCell id="db-odeme" value="Ödeme" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="540" y="950" width="80" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-db-odeme" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="odeme-isle-depola" target="db-odeme">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Çıkış -->
+        <mxCell id="cikis" value="Çıkış" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="930" width="80" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Geri Dönüş (Sağ Alt) -->
+        <mxCell id="return-right" value="Geri Dönüş" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="930" width="100" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Veritabanı Bağlantıları -->
+        <mxCell id="db-main" value="Kayıt Database" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="730" y="500" width="80" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-db-main" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="main-dashboard" target="db-main">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Bağlantı Çizgileri Tamamlaması -->
+        <mxCell id="edge-kayit-to-main" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="kayit-basarili" target="main-dashboard">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="440" y="820" />
+              <mxPoint x="650" y="820" />
+              <mxPoint x="650" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="edge-koşul-to-sirala" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;exitX=1;exitY=0.5;" edge="1" parent="1" source="koşul-urun-list" target="sirala-miktar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge-anlasma-to-odeme" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="anlasma-db" target="odeme-durum">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1410" y="815" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="edge-sirala2-to-algilama" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;exitX=1;exitY=0.5;" edge="1" parent="1" source="sirala-miktar-2" target="algilama">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1190" y="720" />
+              <mxPoint x="1190" y="640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,10 +1,10 @@
 import { Link, useParams } from 'react-router-dom';
-import Navbar from '../../../components/navbar';
+import Navbar from '../../../../components/navbar';
 
 const heroBackground =
   "linear-gradient(0deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 40%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuCpZU1R2hl79yrNUFOM4v8cNGTd1SBvYLdTai1zhDONT8p3L4B3-bTzrYEI21wd2rxeLbsOt25VC83xeRh_uFsgIthMJQwsODDBuQnA5j5wuwFSajg5cjLlr6YIBatZtOw3-Lmx3wzjGpHDTtBokoFRilUGg3vp1LDMDqFUJkRd_hJoW-1oJIVKmIN7ijoEoFwlctfBx9MvO7OtIyxS3gt9lcvh7eWwR1L0Z0krPP2_zcqFTndoml3K5H32vwHqXbJ7_ogev26hrWA')";
 
-function CiftlikDetay() {
+function FarmDetailPage() {
   const { farmerId } = useParams<{ farmerId: string }>();
 
   return (
@@ -234,4 +234,4 @@ function CiftlikDetay() {
   );
 }
 
-export default CiftlikDetay;
+export default FarmDetailPage;
