@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import FrmNavbar from '../components/frmnavbar';
-import Footer from '../components/footer';
 
 const products = [
   {
@@ -814,7 +813,6 @@ function Atiklar() {
           )}
         </div>
       </main>
-      <Footer />
 
       {/* Ürün Detay Modal */}
       {isModalOpen && selectedProduct && (
@@ -826,9 +824,9 @@ function Atiklar() {
             {/* Kapat Butonu */}
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-content-light dark:text-content-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-colors"
+              className="group absolute top-4 right-4 z-10 p-2 rounded-lg border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
             >
-              <span className="material-symbols-outlined text-xl">close</span>
+              <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">close</span>
             </button>
 
             {/* Modal İçeriği */}
@@ -921,9 +919,9 @@ function Atiklar() {
             {/* Kapat Butonu */}
             <button
               onClick={closeTeklifModal}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-content-light dark:text-content-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-colors"
+              className="group absolute top-4 right-4 z-10 p-2 rounded-lg border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
             >
-              <span className="material-symbols-outlined text-xl">close</span>
+              <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">close</span>
             </button>
 
             {/* Modal İçeriği */}

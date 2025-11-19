@@ -1,5 +1,4 @@
 import FrmNavbar from '../../components/frmnavbar';
-import Footer from '../../components/footer';
 import { useNavigate } from 'react-router-dom';
 
 function Firmalar() {
@@ -365,7 +364,6 @@ function Firmalar() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import FrmNavbar from '../../components/frmnavbar';
-import Footer from '../../components/footer';
 
 function FirmaDetay() {
   const { id } = useParams<{ id: string }>();
@@ -407,7 +406,6 @@ function FirmaDetay() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

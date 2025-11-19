@@ -30,6 +30,8 @@ import CiftlikProfil from './pages/ciftlik/ciftlik_profil.tsx'
 import FarmListPage from './pages/admin/ziraat/farms/FarmListPage.tsx'
 import Atiklar from './pages/atiklar.tsx'
 import AtikEkle from './pages/ciftlik/atik_ekle.tsx'
+import UrunDurum from './pages/ciftlik/urun_durum.tsx'
+import FirmaBasvuruDurum from './pages/firma/firma_basvuru_durum.tsx'
 
 function App() {
   return (
@@ -54,6 +56,7 @@ function App() {
         <Route path="/ciftlik/detay/:id" element={<CiftlikDetay />} />
         <Route path="/ciftlik/panel" element={<CiftciPanel />} />
         <Route path="/ciftlik/urunlerim" element={<Urunlerim />} />
+        <Route path="/ciftlik/urun-durum" element={<UrunDurum />} />
         <Route path="/ciftlik/satis-gecmisi" element={<CiftciSatisGecmisi />} />
         <Route path="/ciftlik/profil" element={<CiftlikProfil />} />
         <Route path="/admin/ziraat/ciftlik" element={<FarmListPage />} />
@@ -62,6 +65,7 @@ function App() {
         <Route path="/firma/satis-gecmisi" element={<FirmaSatisGecmisi />} />
         <Route path="/firma/ekle" element={<FirmaEkle />} />
         <Route path="/firma/panel" element={<FirmaPanel />} />
+        <Route path="/firma/basvuru-durum" element={<FirmaBasvuruDurum />} />
         <Route path="/firma/profil" element={<FirmaProfil />} />
         <Route path="/atiklar" element={<Atiklar />} />
         <Route path="/atiklar/ekle" element={<AtikEkle />} />

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CftNavbar from '../../components/cftnavbar';
-import Footer from '../../components/footer';
 
 function CiftciPanel() {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'hafta' | 'ay' | 'yil'>('ay');
@@ -490,7 +489,6 @@ function CiftciPanel() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

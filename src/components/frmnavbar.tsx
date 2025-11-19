@@ -90,6 +90,14 @@ function FrmNavbar() {
                   Ürünler
                 </Link>
               )}
+              {!isActive('/firma/basvuru-durum') && (
+                <Link 
+                  className="text-sm font-medium transition-colors text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary"
+                  to="/firma/basvuru-durum"
+                >
+                  Başvuru Durumu
+                </Link>
+              )}
               {!isActive('/firma/satis-gecmisi') && (
                 <Link 
                   className="text-sm font-medium transition-colors text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary"

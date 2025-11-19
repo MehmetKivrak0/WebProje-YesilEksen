@@ -89,7 +89,7 @@ const FirmaOnaylariPage = () => {
       employeeCount: "50-100",
       establishedYear: "2015",
       website: "www.ekoenerji.com",
-      documents: ["Vergi Levhası", "İmza Sirküleri", "Oda Kayıt Belgesi"],
+      documents: ["Ticaret Sicil Gazetesi", "Vergi Levhası", "İmza Sirküleri", "Faaliyet Belgesi", "Oda Kayıt Sicil Sureti"],
     },
     {
       id: "P-1025",
@@ -146,7 +146,7 @@ const FirmaOnaylariPage = () => {
       employeeCount: "250-500",
       establishedYear: "2012",
       website: "www.yesiltech.com",
-      documents: ["Vergi Levhası", "İmza Sirküleri", "Oda Kayıt Belgesi", "Sertifikalar"],
+      documents: ["Ticaret Sicil Gazetesi", "Vergi Levhası", "İmza Sirküleri", "Oda Kayıt Sicil Sureti"],
     },
     {
       id: "P-1028",
@@ -165,7 +165,7 @@ const FirmaOnaylariPage = () => {
       employeeCount: "10-25",
       establishedYear: "2020",
       website: "www.surenerji.com",
-      documents: ["Vergi Levhası", "İmza Sirküleri", "Oda Kayıt Belgesi"],
+      documents: ["Ticaret Sicil Gazetesi", "Vergi Levhası", "İmza Sirküleri", "Faaliyet Belgesi", "Oda Kayıt Sicil Sureti"],
     },
   ];
 
@@ -749,9 +749,9 @@ Sanayi Odası Yönetimi`;
               </div>
               <button
                 onClick={closeModal}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E8F5E9] bg-[#E8F5E9] text-[#2E7D32] transition-colors hover:border-[#2E7D32] hover:bg-[#E8F5E9]/80 dark:border-[#2E7D32]/30 dark:bg-[#2E7D32]/10 dark:text-[#4CAF50] dark:hover:border-[#4CAF50] dark:hover:bg-[#2E7D32]/20"
+                className="group flex h-10 w-10 items-center justify-center rounded-full border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               >
-                <span className="material-symbols-outlined text-xl">close</span>
+                <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">close</span>
               </button>
             </div>
 
@@ -878,20 +878,91 @@ Sanayi Odası Yönetimi`;
                       Yüklenen Belgeler
                     </h3>
                     <div className="rounded-lg border border-border-light bg-background-light/50 p-4 dark:border-border-dark dark:bg-background-dark/50">
-                      <div className="space-y-2">
-                        {selectedCompany.documents.map((doc, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 rounded-lg border border-border-light bg-background-light px-3 py-2 dark:border-border-dark dark:bg-background-dark"
-                          >
-                            <span className="material-symbols-outlined text-base text-primary">description</span>
-                            <span className="text-sm text-content-light dark:text-content-dark">{doc}</span>
-                            <button className="ml-auto rounded-lg border border-[#2E7D32] bg-[#2E7D32] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1B5E20] dark:border-[#4CAF50] dark:bg-[#4CAF50] dark:hover:bg-[#2E7D32]">
-                              İndir
-                            </button>
-                          </div>
-                        ))}
+                      {/* Zorunlu Belgeler */}
+                      <div className="mb-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-base text-primary">verified</span>
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-subtle-light dark:text-subtle-dark">
+                            Zorunlu Belgeler
+                          </h4>
+                        </div>
+                        <div className="space-y-2">
+                          {selectedCompany.documents
+                            .filter((doc) => 
+                              doc === "Ticaret Sicil Gazetesi" || 
+                              doc === "Vergi Levhası" || 
+                              doc === "İmza Sirküleri" || 
+                              doc === "Faaliyet Belgesi" || 
+                              doc === "Oda Kayıt Sicil Sureti"
+                            )
+                            .map((doc, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 rounded-lg border border-border-light bg-background-light px-3 py-2 dark:border-border-dark dark:bg-background-dark"
+                              >
+                                <span className="material-symbols-outlined text-base text-primary">description</span>
+                                <span className="text-sm text-content-light dark:text-content-dark">{doc}</span>
+                                <span className="ml-auto mr-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                  Onaylandı
+                                </span>
+                                <button className="rounded-lg border border-[#2E7D32] bg-[#2E7D32] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1B5E20] dark:border-[#4CAF50] dark:bg-[#4CAF50] dark:hover:bg-[#2E7D32]">
+                                  İndir
+                                </button>
+                              </div>
+                            ))}
+                        </div>
                       </div>
+
+                      {/* Opsiyonel Belgeler */}
+                      {selectedCompany.documents.some((doc) => 
+                        doc === "Gıda İşletme Kayıt" || 
+                        doc === "Gıda İşletme Kayıt / Onay Belgesi" ||
+                        doc === "Sanayi Sicil Belgesi" || 
+                        doc === "Kapasite Raporu" ||
+                        doc === "Sertifikalar"
+                      ) && (
+                        <div>
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-base text-blue-600 dark:text-blue-400">add_circle</span>
+                            <h4 className="text-xs font-semibold uppercase tracking-wide text-subtle-light dark:text-subtle-dark">
+                              Opsiyonel Belgeler
+                            </h4>
+                          </div>
+                          <div className="space-y-2">
+                            {selectedCompany.documents
+                              .filter((doc) => 
+                                doc === "Gıda İşletme Kayıt" || 
+                                doc === "Gıda İşletme Kayıt / Onay Belgesi" ||
+                                doc === "Sanayi Sicil Belgesi" || 
+                                doc === "Kapasite Raporu" ||
+                                doc === "Sertifikalar"
+                              )
+                              .map((doc, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2 rounded-lg border border-border-light bg-background-light px-3 py-2 dark:border-border-dark dark:bg-background-dark"
+                                >
+                                  <span className="material-symbols-outlined text-base text-blue-600 dark:text-blue-400">description</span>
+                                  <span className="text-sm text-content-light dark:text-content-dark">{doc}</span>
+                                  <span className="ml-auto mr-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                    Onaylandı
+                                  </span>
+                                  <button className="rounded-lg border border-[#2E7D32] bg-[#2E7D32] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1B5E20] dark:border-[#4CAF50] dark:bg-[#4CAF50] dark:hover:bg-[#2E7D32]">
+                                    İndir
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Eğer hiçbir belge yoksa */}
+                      {selectedCompany.documents.length === 0 && (
+                        <div className="py-8 text-center">
+                          <span className="material-symbols-outlined mb-2 text-4xl text-subtle-light dark:text-subtle-dark">folder_open</span>
+                          <p className="text-sm text-subtle-light dark:text-subtle-dark">Henüz belge yüklenmemiş</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -902,7 +973,7 @@ Sanayi Odası Yönetimi`;
             <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-border-light bg-background-light px-6 py-4 dark:border-border-dark dark:bg-background-dark">
               <button
                 onClick={closeModal}
-                className="rounded-lg border border-[#E8F5E9] bg-[#E8F5E9] px-4 py-2 text-sm font-medium text-[#2E7D32] transition-colors hover:border-[#2E7D32] hover:bg-[#E8F5E9]/80 dark:border-[#2E7D32]/30 dark:bg-[#2E7D32]/10 dark:text-[#4CAF50] dark:hover:border-[#4CAF50] dark:hover:bg-[#2E7D32]/20"
+                className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
               >
                 Kapat
               </button>
@@ -950,9 +1021,9 @@ Sanayi Odası Yönetimi`;
               </div>
               <button
                 onClick={closeRejectModal}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E8F5E9] bg-[#E8F5E9] text-[#2E7D32] transition-colors hover:border-[#2E7D32] hover:bg-[#E8F5E9]/80 dark:border-[#2E7D32]/30 dark:bg-[#2E7D32]/10 dark:text-[#4CAF50] dark:hover:border-[#4CAF50] dark:hover:bg-[#2E7D32]/20"
+                className="group flex h-10 w-10 items-center justify-center rounded-full border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               >
-                <span className="material-symbols-outlined text-xl">close</span>
+                <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">close</span>
               </button>
             </div>
 
@@ -1011,7 +1082,7 @@ Sanayi Odası Yönetimi`;
             <div className="flex items-center justify-end gap-3 border-t border-border-light px-6 py-4 dark:border-border-dark">
               <button
                 onClick={closeRejectModal}
-                className="rounded-lg border border-[#E8F5E9] bg-[#E8F5E9] px-4 py-2 text-sm font-medium text-[#2E7D32] transition-colors hover:border-[#2E7D32] hover:bg-[#E8F5E9]/80 dark:border-[#2E7D32]/30 dark:bg-[#2E7D32]/10 dark:text-[#4CAF50] dark:hover:border-[#4CAF50] dark:hover:bg-[#2E7D32]/20"
+                className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
               >
                 İptal
               </button>
@@ -1134,9 +1205,9 @@ Sanayi Odası Yönetimi`;
               </div>
               <button
                 onClick={closeDescriptionModal}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E8F5E9] bg-[#E8F5E9] text-[#2E7D32] transition-colors hover:border-[#2E7D32] hover:bg-[#E8F5E9]/80 dark:border-[#2E7D32]/30 dark:bg-[#2E7D32]/10 dark:text-[#4CAF50] dark:hover:border-[#4CAF50] dark:hover:bg-[#2E7D32]/20"
+                className="group flex h-10 w-10 items-center justify-center rounded-full border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               >
-                <span className="material-symbols-outlined text-xl">close</span>
+                <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">close</span>
               </button>
             </div>
 
@@ -1184,9 +1255,9 @@ Sanayi Odası Yönetimi`;
               </div>
               <button
                 onClick={closeLogDetailModal}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E8F5E9] bg-[#E8F5E9] text-[#2E7D32] transition-colors hover:border-[#2E7D32] hover:bg-[#E8F5E9]/80 dark:border-[#2E7D32]/30 dark:bg-[#2E7D32]/10 dark:text-[#4CAF50] dark:hover:border-[#4CAF50] dark:hover:bg-[#2E7D32]/20"
+                className="group flex h-10 w-10 items-center justify-center rounded-full border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               >
-                <span className="material-symbols-outlined text-xl">close</span>
+                <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">close</span>
               </button>
             </div>
 
@@ -1289,7 +1360,7 @@ Sanayi Odası Yönetimi`;
             <div className="flex flex-shrink-0 items-center justify-end gap-3 border-t border-border-light px-6 py-4 dark:border-border-dark">
               <button
                 onClick={closeLogDetailModal}
-                className="rounded-lg border border-[#2E7D32] bg-[#2E7D32] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1B5E20] dark:border-[#4CAF50] dark:bg-[#4CAF50] dark:hover:bg-[#2E7D32]"
+                className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
               >
                 Kapat
               </button>

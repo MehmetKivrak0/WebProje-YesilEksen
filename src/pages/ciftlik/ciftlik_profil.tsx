@@ -1,5 +1,4 @@
 import CftNavbar from '../../components/cftnavbar';
-import Footer from '../../components/footer';
 import { useState } from 'react';
 
 function CiftlikProfil() {
@@ -396,7 +395,6 @@ function CiftlikProfil() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

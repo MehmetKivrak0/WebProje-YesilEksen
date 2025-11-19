@@ -20,8 +20,11 @@ function FarmProductsModal({ open, farmName, products, onClose }: FarmProductsMo
               Çiftliğin sisteme kayıtlı ürün ve atık listesi.
             </p>
           </div>
-          <button className="text-subtle-light hover:text-primary dark:text-subtle-dark" onClick={onClose}>
-            <span className="material-symbols-outlined text-2xl">close</span>
+          <button
+            className="group p-2 rounded-lg border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+            onClick={onClose}
+          >
+            <span className="material-symbols-outlined text-2xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">close</span>
           </button>
         </div>
 
@@ -49,7 +52,7 @@ function FarmProductsModal({ open, farmName, products, onClose }: FarmProductsMo
         <div className="mt-6 flex justify-end">
           <button
             type="button"
-            className="rounded-lg border border-border-light px-4 py-2 text-sm text-subtle-light transition-colors hover:bg-primary/10 dark:border-border-dark dark:text-subtle-dark dark:hover:bg-primary/20"
+            className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
             onClick={onClose}
           >
             Kapat

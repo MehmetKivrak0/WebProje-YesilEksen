@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FrmNavbar from '../../components/frmnavbar';
-import Footer from '../../components/footer';
 
 function Ciftlikler() {
   const navigate = useNavigate();
@@ -355,7 +354,6 @@ function Ciftlikler() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

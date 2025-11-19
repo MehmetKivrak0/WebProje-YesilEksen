@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import CftNavbar from '../../components/cftnavbar';
-import Footer from '../../components/footer';
 
 type Product = {
   id: number;
@@ -108,6 +107,12 @@ function Urunlerim() {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>(myProducts);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const itemsPerPage = 6;
 
   // Ref'ler dropdown'lar için
@@ -175,12 +180,76 @@ function Urunlerim() {
     };
   }, [isModalOpen]);
 
+  // Silme işlemi
+  const handleDelete = (product: Product) => {
+    setProductToDelete(product);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (productToDelete) {
+      // Gerçek uygulamada API çağrısı yapılacak
+      // API'ye silme isteği gönder ve yöneticiye bildirim gönder
+      console.log('Ürün siliniyor:', productToDelete);
+      console.log('Yöneticiye bildirim gönderiliyor: Ürün silme talebi -', productToDelete.title);
+      
+      // Ürünü listeden kaldır
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      
+      // Başarı mesajı göster
+      setSuccessMessage(`${productToDelete.title} ürünü silme talebi yöneticiye iletildi.`);
+      setShowSuccessMessage(true);
+      
+      // Modal'ları kapat
+      setIsDeleteConfirmOpen(false);
+      setProductToDelete(null);
+      
+      // 3 saniye sonra mesajı gizle
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 3000);
+    }
+  };
+
+  // Düzenleme işlemi
+  const handleEdit = (product: Product) => {
+    setSelectedProduct(product);
+    setIsEditModalOpen(true);
+    setIsModalOpen(false);
+  };
+
+  const handleSaveEdit = (editedProduct: Product) => {
+    // Gerçek uygulamada API çağrısı yapılacak
+    console.log('Ürün düzenleniyor:', editedProduct);
+    console.log('Yöneticiye bildirim gönderiliyor: Ürün düzenleme talebi -', editedProduct.title);
+    
+    // Ürünü güncelle ve durumu "Onay Bekliyor" yap
+    setProducts(prev => prev.map(p => 
+      p.id === editedProduct.id 
+        ? { ...editedProduct, durum: 'Onay Bekliyor' as const }
+        : p
+    ));
+    
+    // Başarı mesajı göster
+    setSuccessMessage(`${editedProduct.title} ürünü düzenlendi ve onay için yöneticiye iletildi.`);
+    setShowSuccessMessage(true);
+    
+    // Modal'ı kapat
+    setIsEditModalOpen(false);
+    setSelectedProduct(null);
+    
+    // 3 saniye sonra mesajı gizle
+    setTimeout(() => {
+      setShowSuccessMessage(false);
+    }, 3000);
+  };
+
   // Benzersiz kategorileri ve durumları al
-  const uniqueCategories = Array.from(new Set(myProducts.map((p) => p.category))).sort();
+  const uniqueCategories = Array.from(new Set(products.map((p) => p.category))).sort();
   const uniqueStatus = ['Aktif', 'Onay Bekliyor', 'Satıldı', 'Pasif'] as const;
 
   // Filtreleme mantığı
-  const filteredProducts = myProducts.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(product.category);
     const statusMatch = selectedStatus.length === 0 || selectedStatus.includes(product.durum);
     const searchMatch = searchTerm === '' || 
@@ -498,20 +567,14 @@ function Urunlerim() {
                       <span className="material-symbols-outlined text-sm">info</span>
                       Detay
                     </button>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-                        title="Düzenle"
-                      >
-                        <span className="material-symbols-outlined text-base">edit</span>
-                      </button>
-                      <button
-                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
-                        title="Sil"
-                      >
-                        <span className="material-symbols-outlined text-base">delete</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleDelete(product)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-white border border-red-500/50 text-red-500 hover:bg-red-500/10 hover:border-red-500 transition-colors"
+                      title="Sil"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                      Sil
+                    </button>
                   </div>
                 </div>
               </div>
@@ -586,7 +649,6 @@ function Urunlerim() {
           )}
         </div>
       </main>
-      <Footer />
 
       {/* Ürün Detay Modal */}
       {isModalOpen && selectedProduct && (
@@ -597,9 +659,9 @@ function Urunlerim() {
           >
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-content-light dark:text-content-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-colors"
+              className="group absolute top-4 right-4 z-10 p-2 rounded-lg border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
             >
-              <span className="material-symbols-outlined text-xl">close</span>
+              <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">close</span>
             </button>
 
             <div className="flex flex-col">
@@ -669,11 +731,14 @@ function Urunlerim() {
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border-light dark:border-border-dark">
                   <button
                     onClick={closeModal}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-content-light dark:text-content-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary transition-colors"
+                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
                   >
                     Kapat
                   </button>
-                  <button className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => handleEdit(selectedProduct)}
+                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                  >
                     <span className="material-symbols-outlined text-base">edit</span>
                     Düzenle
                   </button>
@@ -683,6 +748,238 @@ function Urunlerim() {
           </div>
         </div>
       )}
+
+      {/* Silme Onay Modal */}
+      {isDeleteConfirmOpen && productToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="relative w-full max-w-md bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-2xl text-red-600 dark:text-red-400">warning</span>
+                </div>
+                <h3 className="text-xl font-semibold text-content-light dark:text-content-dark">Ürünü Sil</h3>
+              </div>
+              <p className="text-sm text-subtle-light dark:text-subtle-dark mb-2">
+                <strong className="text-content-light dark:text-content-dark">{productToDelete.title}</strong> ürününü silmek istediğinizden emin misiniz?
+              </p>
+              <p className="text-xs text-subtle-light dark:text-subtle-dark mb-6">
+                Bu işlem yöneticiye bildirilecek ve onay sonrası ürün kalıcı olarak silinecektir.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setIsDeleteConfirmOpen(false);
+                    setProductToDelete(null);
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:border-gray-500 dark:hover:border-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+                >
+                  Sil
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Düzenleme Modal */}
+      {isEditModalOpen && selectedProduct && (
+        <EditProductModal
+          product={selectedProduct}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedProduct(null);
+          }}
+          onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* Başarı Mesajı */}
+      {showSuccessMessage && (
+        <div className="fixed top-24 right-4 z-[60] animate-slide-in-right">
+          <div className="bg-green-50 dark:bg-green-900/90 border-2 border-green-500 dark:border-green-400 rounded-xl p-4 shadow-xl min-w-[320px]">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-800 rounded-lg">
+                <span className="material-symbols-outlined text-2xl text-green-600 dark:text-green-300">check_circle</span>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-green-900 dark:text-green-100 mb-1">İşlem Başarılı!</h4>
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  {successMessage}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSuccessMessage(false)}
+                className="group p-1 rounded-lg border border-green-200 dark:border-green-700 bg-green-100/70 dark:bg-green-900/40 transition-colors hover:border-green-500 hover:bg-green-200 dark:hover:bg-green-800/70"
+              >
+                <span className="material-symbols-outlined text-green-700 dark:text-green-300 group-hover:text-green-900 dark:group-hover:text-green-100 transition-colors">close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Düzenleme Modal Komponenti
+function EditProductModal({ product, onClose, onSave }: { product: Product; onClose: () => void; onSave: (product: Product) => void }) {
+  const [editedProduct, setEditedProduct] = useState<Product>(product);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(editedProduct);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark shadow-2xl"
+      >
+        <div className="sticky top-0 bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark p-6 flex items-center justify-between z-10">
+          <h2 className="text-2xl font-bold text-content-light dark:text-content-dark">Ürünü Düzenle</h2>
+          <button
+            onClick={onClose}
+            className="group p-2 rounded-lg border border-border-light/70 dark:border-border-dark/70 bg-background-light/95 dark:bg-background-dark/90 backdrop-blur-sm transition-colors hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+          >
+            <span className="material-symbols-outlined text-xl text-subtle-light dark:text-subtle-dark group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">close</span>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Bilgilendirme */}
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start gap-2">
+              <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400">info</span>
+              <div>
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">Önemli Bilgi</p>
+                <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                  Ürünü düzenledikten sonra durum "Onay Bekliyor" olarak değişecek ve yönetici onayı gerekecektir.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Ürün Adı */}
+          <div>
+            <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+              Ürün Adı *
+            </label>
+            <input
+              type="text"
+              value={editedProduct.title}
+              onChange={(e) => setEditedProduct({ ...editedProduct, title: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+              required
+            />
+          </div>
+
+          {/* Miktar ve Fiyat */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                Miktar *
+              </label>
+              <input
+                type="text"
+                value={editedProduct.miktar}
+                onChange={(e) => setEditedProduct({ ...editedProduct, miktar: e.target.value })}
+                className="w-full px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                placeholder="Örn: 25 Ton"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                Fiyat *
+              </label>
+              <input
+                type="text"
+                value={editedProduct.price}
+                onChange={(e) => setEditedProduct({ ...editedProduct, price: e.target.value })}
+                className="w-full px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                placeholder="Örn: 280 ₺ / ton"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Kategori */}
+          <div>
+            <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+              Kategori *
+            </label>
+            <input
+              type="text"
+              value={editedProduct.category}
+              onChange={(e) => setEditedProduct({ ...editedProduct, category: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+              required
+            />
+          </div>
+
+          {/* Açıklama */}
+          <div>
+            <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+              Açıklama *
+            </label>
+            <textarea
+              value={editedProduct.desc}
+              onChange={(e) => setEditedProduct({ ...editedProduct, desc: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary transition-colors resize-none"
+              rows={4}
+              required
+            />
+          </div>
+
+          {/* Butonlar */}
+          <div className="flex gap-3 pt-4 border-t border-border-light dark:border-border-dark">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
+            >
+              İptal
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-base">save</span>
+              Kaydet ve Onay İste
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

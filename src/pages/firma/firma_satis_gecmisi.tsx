@@ -1,5 +1,4 @@
 import FrmNavbar from '../../components/frmnavbar';
-import Footer from '../../components/footer';
 
 function FirmaSatisGecmisi() {
   return (
@@ -142,7 +141,6 @@ function FirmaSatisGecmisi() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

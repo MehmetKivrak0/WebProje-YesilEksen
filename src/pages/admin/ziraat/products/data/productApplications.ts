@@ -8,7 +8,7 @@ export const initialProductApplications: ProductApplication[] = [
     status: 'İncelemede',
     submittedAt: '2024-02-12',
     lastUpdate: '2 saat önce',
-    notes: 'Laboratuvar sonuçları bekleniyor.',
+    notes: 'Analiz raporu bekleniyor. Satış birimi: Ton (25 ton)',
     farm: 'Güneş Çiftliği',
     contact: {
       name: 'Mehmet Yılmaz',
@@ -16,10 +16,11 @@ export const initialProductApplications: ProductApplication[] = [
       email: 'mehmet.yilmaz@anadolutarim.org',
     },
     documents: [
-      { name: 'Ürün İçerik Analizi', status: 'Beklemede', url: '/docs/urun-icerik-analizi.pdf' },
-      { name: 'ÇKS Belgesi', status: 'Onaylandı', url: '/docs/cks-belgesi.pdf' },
-      { name: 'TSE Uygunluk', status: 'Onaylandı', url: '/docs/tse-uygunluk.pdf' },
-      { name: 'Sevkiyat Planı', status: 'Eksik' },
+      { name: 'Sevk İrsaliyesi', status: 'Onaylandı', url: '/docs/sevk-irsaliyesi.pdf' },
+      { name: 'Fatura / Müstahsil Makbuzu', status: 'Onaylandı', url: '/docs/fatura.pdf' },
+      { name: 'Menşei Belgesi (ÇKS / İşletme Tescil)', status: 'Onaylandı', url: '/docs/cks-belgesi.pdf' },
+      { name: 'Kantar Fişi', status: 'Onaylandı', url: '/docs/kantar-fisi.pdf', farmerNote: 'Satış birimi: Ton' },
+      { name: 'Analiz Raporu', status: 'Beklemede', farmerNote: 'Garanti İçerikli ürün - Laboratuvar sonuçları bekleniyor' },
     ],
   },
   {
@@ -29,7 +30,7 @@ export const initialProductApplications: ProductApplication[] = [
     status: 'Onaylandı',
     submittedAt: '2024-02-08',
     lastUpdate: 'Dün',
-    notes: 'Tüm belgeler eksiksiz teslim edildi.',
+    notes: 'Tüm belgeler eksiksiz teslim edildi. Satış birimi: Litre (1000 L)',
     farm: 'Bereket Vadisi',
     contact: {
       name: 'Ayşe Demir',
@@ -37,9 +38,10 @@ export const initialProductApplications: ProductApplication[] = [
       email: 'ayse.demir@cukurovaziraat.com',
     },
     documents: [
-      { name: 'Ürün Güvenlik Formu', status: 'Onaylandı', url: '/docs/urun-guvenlik-formu.pdf' },
-      { name: 'Tarım İl Müdürlüğü Onayı', status: 'Onaylandı', url: '/docs/tarim-il-mudurlugu-onayi.pdf' },
-      { name: 'Numune Sonuçları', status: 'Onaylandı', url: '/docs/numune-sonuclari.pdf' },
+      { name: 'Sevk İrsaliyesi', status: 'Onaylandı', url: '/docs/sevk-irsaliyesi-sivigubre.pdf' },
+      { name: 'Fatura / Müstahsil Makbuzu', status: 'Onaylandı', url: '/docs/fatura-sivigubre.pdf' },
+      { name: 'Menşei Belgesi (ÇKS / İşletme Tescil)', status: 'Onaylandı', url: '/docs/cks-belgesi-bereket.pdf' },
+      { name: 'Analiz Raporu', status: 'Onaylandı', url: '/docs/analiz-raporu-sivigubre.pdf', farmerNote: 'Analizli ürün - Tüm içerik analizi tamamlandı' },
     ],
   },
   {
@@ -49,7 +51,7 @@ export const initialProductApplications: ProductApplication[] = [
     status: 'Revizyon',
     submittedAt: '2024-02-05',
     lastUpdate: '3 gün önce',
-    notes: 'İçerik analizi güncellenmeli.',
+    notes: 'Analiz raporu güncellenmeli. Satış birimi: Kg (500 kg)',
     farm: 'Yeşil Ovalar',
     contact: {
       name: 'Ali Kaya',
@@ -57,9 +59,11 @@ export const initialProductApplications: ProductApplication[] = [
       email: 'ali.kaya@bereketgida.com',
     },
     documents: [
-      { name: 'İçerik Analiz Raporu', status: 'Eksik' },
-      { name: 'Besin Değerleri Tablosu', status: 'Beklemede', url: '/docs/besin-degerleri.pdf' },
-      { name: 'Üretim Sertifikası', status: 'Onaylandı', url: '/docs/uretim-sertifikasi.pdf' },
+      { name: 'Sevk İrsaliyesi', status: 'Onaylandı', url: '/docs/sevk-irsaliyesi-yem.pdf' },
+      { name: 'Fatura / Müstahsil Makbuzu', status: 'Beklemede' },
+      { name: 'Menşei Belgesi (ÇKS / İşletme Tescil)', status: 'Onaylandı', url: '/docs/cks-belgesi-yesilovalar.pdf' },
+      { name: 'Kantar Fişi', status: 'Onaylandı', url: '/docs/kantar-fisi-yem.pdf', farmerNote: 'Satış birimi: Kg' },
+      { name: 'Analiz Raporu', status: 'Eksik', farmerNote: 'Garanti İçerikli - İçerik analizi güncellenmeli' },
     ],
   },
   {
@@ -69,7 +73,7 @@ export const initialProductApplications: ProductApplication[] = [
     status: 'İncelemede',
     submittedAt: '2024-02-10',
     lastUpdate: '6 saat önce',
-    notes: 'Saha ziyareti planlandı.',
+    notes: 'Saha ziyareti planlandı. Satış birimi: Ton (15 ton)',
     farm: 'Eko Enerji Çiftliği',
     contact: {
       name: 'Fatma Korkmaz',
@@ -77,9 +81,10 @@ export const initialProductApplications: ProductApplication[] = [
       email: 'fatma.korkmaz@ekodonusum.com',
     },
     documents: [
-      { name: 'Enerji Üretim Lisansı', status: 'Beklemede', url: '/docs/enerji-uretim-lisansi.pdf' },
-      { name: 'Atık Kaynağı Sözleşmesi', status: 'Onaylandı', url: '/docs/atik-kaynagi-sozlesmesi.pdf' },
-      { name: 'Yangın Güvenliği Planı', status: 'Onaylandı', url: '/docs/yangin-guvenligi-plani.pdf' },
+      { name: 'Sevk İrsaliyesi', status: 'Onaylandı', url: '/docs/sevk-irsaliyesi-pelet.pdf' },
+      { name: 'Fatura / Müstahsil Makbuzu', status: 'Onaylandı', url: '/docs/fatura-pelet.pdf' },
+      { name: 'Menşei Belgesi (ÇKS / İşletme Tescil)', status: 'Beklemede', url: '/docs/cks-belgesi-ekoenerji.pdf' },
+      { name: 'Kantar Fişi', status: 'Onaylandı', url: '/docs/kantar-fisi-pelet.pdf', farmerNote: 'Satış birimi: Ton' },
     ],
   },
   {
@@ -89,7 +94,7 @@ export const initialProductApplications: ProductApplication[] = [
     status: 'Onaylandı',
     submittedAt: '2024-01-29',
     lastUpdate: '4 gün önce',
-    notes: 'Ürün sertifikası yayınlandı.',
+    notes: 'Tüm belgeler onaylandı. Satış birimi: m³ (30 m³)',
     farm: 'Anka Organik Çiftliği',
     contact: {
       name: 'Hakan Arslan',
@@ -97,9 +102,10 @@ export const initialProductApplications: ProductApplication[] = [
       email: 'hakan.arslan@ankaorganik.com',
     },
     documents: [
-      { name: 'Organik Ürün Sertifikası', status: 'Onaylandı', url: '/docs/organik-urun-sertifikasi.pdf' },
-      { name: 'Geri Dönüşüm Raporu', status: 'Onaylandı', url: '/docs/geri-donusum-raporu.pdf' },
-      { name: 'Lojistik Planı', status: 'Onaylandı', url: '/docs/lojistik-plani.pdf' },
+      { name: 'Sevk İrsaliyesi', status: 'Onaylandı', url: '/docs/sevk-irsaliyesi-tavukgubre.pdf' },
+      { name: 'Fatura / Müstahsil Makbuzu', status: 'Onaylandı', url: '/docs/fatura-tavukgubre.pdf' },
+      { name: 'Menşei Belgesi (ÇKS / İşletme Tescil)', status: 'Onaylandı', url: '/docs/cks-belgesi-anka.pdf' },
+      { name: 'Analiz Raporu', status: 'Onaylandı', url: '/docs/analiz-raporu-tavukgubre.pdf', farmerNote: 'Analizli ürün - Organik sertifikalı' },
     ],
   },
 ];

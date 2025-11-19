@@ -1,5 +1,4 @@
 import FrmNavbar from '../../components/frmnavbar';
-import Footer from '../../components/footer';
 import { useState } from 'react';
 
 function FirmaProfil() {
@@ -333,7 +332,6 @@ function FirmaProfil() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

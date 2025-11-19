@@ -101,6 +101,14 @@ function CftNavbar() {
                       Atık Ekle
                     </Link>
                   )}
+                  {!isActive('/ciftlik/urun-durum') && (
+                    <Link 
+                      className="text-sm font-medium transition-colors text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary"
+                      to="/ciftlik/urun-durum"
+                    >
+                      Ürün Durumu
+                    </Link>
+                  )}
                   {!isActive('/ciftlik/satis-gecmisi') && (
                     <Link 
                       className="text-sm font-medium transition-colors text-subtle-light dark:text-subtle-dark hover:text-primary dark:hover:text-primary"

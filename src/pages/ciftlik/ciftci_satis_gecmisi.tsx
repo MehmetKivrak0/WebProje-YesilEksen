@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import CftNavbar from '../../components/cftnavbar';
-import Footer from '../../components/footer';
 
 function CiftciSatisGecmisi() {
   const [selectedFilter, setSelectedFilter] = useState<'tumu' | 'tamamlandi' | 'kargoda' | 'hazirlaniyor'>('tumu');
@@ -256,7 +255,6 @@ function CiftciSatisGecmisi() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

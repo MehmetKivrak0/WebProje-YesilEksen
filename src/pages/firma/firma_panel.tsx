@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import FrmNavbar from '../../components/frmnavbar';
-import Footer from '../../components/footer';
 
 function FirmaPanel() {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'hafta' | 'ay' | 'yil'>('ay');
@@ -353,7 +352,6 @@ function FirmaPanel() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

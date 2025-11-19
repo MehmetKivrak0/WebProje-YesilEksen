@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import CftNavbar from '../../components/cftnavbar';
-import Footer from '../../components/footer';
 
 function AtikEkle() {
+  const [salesUnit, setSalesUnit] = useState('ton');
+  const [isAnalyzed, setIsAnalyzed] = useState(false);
+  const [hasGuarantee, setHasGuarantee] = useState(false);
+
   return (
     <div className="font-display min-h-screen w-full bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark flex flex-col">
       <CftNavbar />
@@ -37,7 +41,7 @@ function AtikEkle() {
 
                   <div>
                     <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
-                      Miktar
+                      Miktar ve Satış Birimi
                     </label>
                     <div className="flex items-center gap-3">
                       <div className="relative flex-1">
@@ -45,10 +49,15 @@ function AtikEkle() {
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-subtle-light dark:text-subtle-dark">scale</span>
                       </div>
                       <div className="relative w-32">
-                        <select className="form-select h-12 pl-4 pr-10 text-base bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-content-light dark:text-content-dark appearance-none transition-all hover:border-primary/50">
-                          <option>ton</option>
-                          <option>m³</option>
-                          <option>litre</option>
+                        <select 
+                          value={salesUnit}
+                          onChange={(e) => setSalesUnit(e.target.value)}
+                          className="form-select h-12 pl-4 pr-10 text-base bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-content-light dark:text-content-dark appearance-none transition-all hover:border-primary/50"
+                        >
+                          <option value="ton">Ton</option>
+                          <option value="kg">Kg</option>
+                          <option value="m3">m³</option>
+                          <option value="litre">Litre</option>
                         </select>
                         <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-subtle-light dark:text-subtle-dark pointer-events-none">expand_more</span>
                       </div>
@@ -67,26 +76,175 @@ function AtikEkle() {
 
                   <div>
                     <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-3">
-                      Belge Yükleme
+                      Ürün Özellikleri
                     </label>
                     <div className="space-y-4">
-                      <label className="group relative flex flex-col items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark rounded-xl p-8 hover:border-primary dark:hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 cursor-pointer">
-                        <div className="w-16 h-16 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                          <span className="material-symbols-outlined text-3xl text-primary">upload_file</span>
-                        </div>
-                        <p className="text-sm font-medium text-content-light dark:text-content-dark mb-1">Laboratuvar Belgesi</p>
-                        <p className="text-xs text-subtle-light dark:text-subtle-dark">PDF, JPG veya PNG formatında</p>
-                        <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".pdf,.jpg,.jpeg,.png" />
-                      </label>
+                      {/* Analizli Ürün */}
+                      <div>
+                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                          <input 
+                            type="checkbox" 
+                            checked={isAnalyzed}
+                            onChange={(e) => setIsAnalyzed(e.target.checked)}
+                            className="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary focus:ring-2 cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-content-light dark:text-content-dark">Analizli Ürün</span>
+                            <p className="text-xs text-subtle-light dark:text-subtle-dark">Ürün laboratuvar analizinden geçmiştir</p>
+                          </div>
+                        </label>
 
-                      <label className="group relative flex flex-col items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark rounded-xl p-8 hover:border-primary dark:hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 cursor-pointer">
-                        <div className="w-16 h-16 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                          <span className="material-symbols-outlined text-3xl text-primary">add_a_photo</span>
+                        {/* Analizli Ürün için Belge Yükleme */}
+                        {isAnalyzed && (
+                          <div className="mt-3 ml-4 pl-4 border-l-2 border-amber-500">
+                            <label className="group relative flex flex-col border-2 border-dashed border-amber-500/50 dark:border-amber-500/30 bg-amber-50/50 dark:bg-amber-900/10 rounded-lg p-4 hover:border-amber-500 dark:hover:border-amber-500/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all duration-300 cursor-pointer">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 rounded-lg bg-amber-500/20 dark:bg-amber-500/30 flex items-center justify-center flex-shrink-0">
+                                  <span className="material-symbols-outlined text-xl text-amber-600 dark:text-amber-400">lab_research</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-content-light dark:text-content-dark">Laboratuvar Analiz Raporu *</p>
+                                  <p className="text-xs text-amber-700 dark:text-amber-400">Ürün içerik ve kalite analizi belgesi</p>
+                                </div>
+                              </div>
+                              <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Garanti İçerikli */}
+                      <div>
+                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                          <input 
+                            type="checkbox" 
+                            checked={hasGuarantee}
+                            onChange={(e) => setHasGuarantee(e.target.checked)}
+                            className="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary focus:ring-2 cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-content-light dark:text-content-dark">Garanti İçerikli</span>
+                            <p className="text-xs text-subtle-light dark:text-subtle-dark">Ürün içerik garantisi ile satılmaktadır</p>
+                          </div>
+                        </label>
+
+                        {/* Garanti İçerikli için Belge Yükleme */}
+                        {hasGuarantee && (
+                          <div className="mt-3 ml-4 pl-4 border-l-2 border-amber-500">
+                            <label className="group relative flex flex-col border-2 border-dashed border-amber-500/50 dark:border-amber-500/30 bg-amber-50/50 dark:bg-amber-900/10 rounded-lg p-4 hover:border-amber-500 dark:hover:border-amber-500/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all duration-300 cursor-pointer">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 rounded-lg bg-amber-500/20 dark:bg-amber-500/30 flex items-center justify-center flex-shrink-0">
+                                  <span className="material-symbols-outlined text-xl text-amber-600 dark:text-amber-400">verified</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-content-light dark:text-content-dark">Garanti Belgesi / Analiz Raporu *</p>
+                                  <p className="text-xs text-amber-700 dark:text-amber-400">İçerik garantisini destekleyen belge</p>
+                                </div>
+                              </div>
+                              <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-3">
+                      Belge ve Fotoğraf Yükleme
+                    </label>
+                    
+                    {/* Zorunlu Belgeler */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="material-symbols-outlined text-base text-red-600 dark:text-red-400">verified</span>
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-subtle-light dark:text-subtle-dark">
+                          Zorunlu
+                        </h4>
+                      </div>
+                      <div className="space-y-3">
+                        {/* Ürün Fotoğrafı */}
+                        <label className="group relative flex flex-col border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4 hover:border-primary dark:hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 cursor-pointer">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-lg bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                              <span className="material-symbols-outlined text-xl text-red-600 dark:text-red-400">add_a_photo</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-content-light dark:text-content-dark">Ürün Fotoğrafı *</p>
+                              <p className="text-xs text-subtle-light dark:text-subtle-dark">Ürününüzü katalogda gösterecek fotoğraf</p>
+                            </div>
+                          </div>
+                          <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".jpg,.jpeg,.png" />
+                        </label>
+
+                        {/* Menşei Belgesi (ÇKS) */}
+                        <label className="group relative flex flex-col border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4 hover:border-primary dark:hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 cursor-pointer">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-lg bg-red-500/10 dark:bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                              <span className="material-symbols-outlined text-xl text-red-600 dark:text-red-400">verified_user</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-content-light dark:text-content-dark">Menşei Belgesi (ÇKS / İşletme Tescil) *</p>
+                              <p className="text-xs text-subtle-light dark:text-subtle-dark">Çiftliğinizin kayıtlı olduğunu gösteren belge</p>
+                            </div>
+                          </div>
+                          <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+                        </label>
+                      </div>
+                    </div>
+
+
+                    {/* Opsiyonel Belgeler */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="material-symbols-outlined text-base text-blue-600 dark:text-blue-400">add_circle</span>
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-subtle-light dark:text-subtle-dark">
+                          Opsiyonel (Ürününüzü Daha Cazip Kılar)
+                        </h4>
+                      </div>
+                      <div className="space-y-3">
+                        {/* Ek Fotoğraflar */}
+                        <label className="group relative flex flex-col border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4 hover:border-primary dark:hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 cursor-pointer">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                              <span className="material-symbols-outlined text-xl text-blue-600 dark:text-blue-400">collections</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-content-light dark:text-content-dark">Ek Fotoğraflar</p>
+                              <p className="text-xs text-subtle-light dark:text-subtle-dark">Ürününüzün farklı açılardan fotoğrafları</p>
+                            </div>
+                          </div>
+                          <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".jpg,.jpeg,.png" multiple />
+                        </label>
+
+                        {/* Kalite Sertifikaları */}
+                        <label className="group relative flex flex-col border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4 hover:border-primary dark:hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all duration-300 cursor-pointer">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                              <span className="material-symbols-outlined text-xl text-blue-600 dark:text-blue-400">workspace_premium</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-content-light dark:text-content-dark">Kalite Sertifikaları</p>
+                              <p className="text-xs text-subtle-light dark:text-subtle-dark">Organik, TSE, ISO vb. sertifikalar</p>
+                            </div>
+                          </div>
+                          <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50">
+                      <div className="flex items-start gap-2">
+                        <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base mt-0.5">info</span>
+                        <div className="flex-1">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                            <strong>Önemli:</strong> Sevk irsaliyesi, fatura ve kantar fişi gibi belgeler satış gerçekleştikten sonra istenecektir.
+                          </p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400">
+                            📄 Maksimum dosya boyutu: 10 MB | Format: PDF, JPG, PNG
+                          </p>
                         </div>
-                        <p className="text-sm font-medium text-content-light dark:text-content-dark mb-1">Fotoğraf Yükle</p>
-                        <p className="text-xs text-subtle-light dark:text-subtle-dark">JPG veya PNG formatında</p>
-                        <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file" accept=".jpg,.jpeg,.png" />
-                      </label>
+                      </div>
                     </div>
                   </div>
                 </form>
@@ -212,7 +370,6 @@ function AtikEkle() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

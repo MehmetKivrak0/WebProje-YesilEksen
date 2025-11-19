@@ -21,11 +21,22 @@ function Kayit() {
     // Şirket için
     companyName: '',
     taxNumber: '',
-    // Step 3: Belgeler
-    tapuDocument: null as File | null,
-    isletmeRuhsati: null as File | null,
-    kimlikBelgesi: null as File | null,
-    sertifikalar: null as File | null,
+    // Step 3: Belgeler - Bakanlığa Başvuru Sırasında Teslim Edilenler (Çiftçi için)
+    tapuOrKiraDocument: null as File | null, // Tapu Senedi veya Onaylı Kira Sözleşmesi
+    nufusCuzdani: null as File | null, // Nüfus Cüzdanı Fotokopisi
+    ciftciKutuguKaydi: null as File | null, // Çiftçi Kütüğü Kaydı (Ziraat Odasından)
+    muvafakatname: null as File | null, // Muvafakatname (Hisseli araziler için - Opsiyonel)
+    taahhutname: null as File | null, // Taahhütname (Bakanlık matbu formu - Opsiyonel)
+    donerSermayeMakbuz: null as File | null, // Döner Sermaye Ücret Makbuzu (Opsiyonel)
+    // Step 3: Belgeler - Sanayi Odası İçin (Şirket için)
+    ticaretSicilGazetesi: null as File | null, // Ticaret Sicil Gazetesi (Zorunlu)
+    vergiLevhasi: null as File | null, // Vergi Levhası (Zorunlu)
+    imzaSirkuleri: null as File | null, // İmza Sirküleri (Zorunlu)
+    faaliyetBelgesi: null as File | null, // Faaliyet Belgesi (Zorunlu)
+    odaKayitSicilSureti: null as File | null, // Oda Kayıt Sicil Sureti (Zorunlu)
+    gidaIsletmeKayit: null as File | null, // Gıda İşletme Kayıt/Onay Belgesi (Opsiyonel)
+    sanayiSicilBelgesi: null as File | null, // Sanayi Sicil Belgesi (Opsiyonel)
+    kapasiteRaporu: null as File | null, // Kapasite Raporu (Opsiyonel)
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -575,86 +586,396 @@ function Kayit() {
           {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-content-light dark:text-content-dark mb-6">Gerekli Belgeler</h2>
+              <p className="text-sm text-subtle-light dark:text-subtle-dark mb-4">
+                {formData.userType === 'farmer' 
+                  ? 'Bakanlığa başvuru sırasında teslim edilecek belgeleri yükleyin.' 
+                  : 'Sanayi Odasına başvuru sırasında teslim edilecek belgeleri yükleyin.'} Tüm belgeler PDF, JPG veya PNG formatında olmalıdır.
+              </p>
               
               <div className="space-y-6">
-                {/* Tapu Belgesi (Sadece çiftçi için) */}
-                {formData.userType === 'farmer' && (
-                  <div>
-                    <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">Tapu Belgesi *</label>
+                {/* Zorunlu Belgeler */}
+                <div className="border-t border-border-light dark:border-border-dark pt-4">
+                  <h3 className="text-lg font-semibold text-content-light dark:text-content-dark mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">verified</span>
+                    Zorunlu Belgeler
+                  </h3>
+
+                  {/* Tapu Senedi veya Onaylı Kira Sözleşmesi (Sadece çiftçi için) */}
+                  {formData.userType === 'farmer' && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Tapu Senedi veya Onaylı Kira Sözleşmesi *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Arazi mülkiyetini veya kullanım hakkını gösteren resmi belge
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.tapuOrKiraDocument && (
+                          <p className="text-sm text-primary mt-2">{formData.tapuOrKiraDocument.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="tapuOrKiraDocument"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Nüfus Cüzdanı Fotokopisi */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                      Nüfus Cüzdanı Fotokopisi *
+                    </label>
+                    <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                      İşletme sahibinin TC kimlik belgesi fotokopisi
+                    </p>
                     <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
                       <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
                       <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
-                      {formData.tapuDocument && (
-                        <p className="text-sm text-primary mt-2">{formData.tapuDocument.name}</p>
+                      {formData.nufusCuzdani && (
+                        <p className="text-sm text-primary mt-2">{formData.nufusCuzdani.name}</p>
                       )}
                       <input 
                         type="file" 
-                        name="tapuDocument"
+                        name="nufusCuzdani"
                         onChange={handleInputChange}
                         className="hidden" 
                         accept=".pdf,.jpg,.jpeg,.png"
                       />
                     </label>
                   </div>
-                )}
 
-                {/* İşletme Ruhsatı */}
-                <div>
-                  <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">İşletme Ruhsatı *</label>
-                  <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
-                    <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
-                    <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
-                    {formData.isletmeRuhsati && (
-                      <p className="text-sm text-primary mt-2">{formData.isletmeRuhsati.name}</p>
-                    )}
-                    <input 
-                      type="file" 
-                      name="isletmeRuhsati"
-                      onChange={handleInputChange}
-                      className="hidden" 
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                  </label>
+                  {/* Çiftçi Kütüğü Kaydı (Sadece çiftçi için) */}
+                  {formData.userType === 'farmer' && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Çiftçi Kütüğü Kaydı *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Ziraat Odasından alınan çiftçi kayıt belgesi
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.ciftciKutuguKaydi && (
+                          <p className="text-sm text-primary mt-2">{formData.ciftciKutuguKaydi.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="ciftciKutuguKaydi"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
 
-                {/* Kimlik Belgesi */}
-                <div>
-                  <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">Kimlik Belgesi *</label>
-                  <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
-                    <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
-                    <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
-                    {formData.kimlikBelgesi && (
-                      <p className="text-sm text-primary mt-2">{formData.kimlikBelgesi.name}</p>
-                    )}
-                    <input 
-                      type="file" 
-                      name="kimlikBelgesi"
-                      onChange={handleInputChange}
-                      className="hidden" 
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                  </label>
-                </div>
+                {/* Opsiyonel Belgeler */}
+                <div className="border-t border-border-light dark:border-border-dark pt-4">
+                  <h3 className="text-lg font-semibold text-content-light dark:text-content-dark mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">add_circle</span>
+                    Opsiyonel Belgeler
+                  </h3>
 
-                {/* Sertifikalar (Opsiyonel) */}
-                <div>
-                  <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">Sertifikalar (Opsiyonel)</label>
-                  <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
-                    <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
-                    <p className="text-sm text-subtle-light dark:text-subtle-dark">Organik sertifika, ISO belgeleri vb.</p>
-                    {formData.sertifikalar && (
-                      <p className="text-sm text-primary mt-2">{formData.sertifikalar.name}</p>
-                    )}
-                    <input 
-                      type="file" 
-                      name="sertifikalar"
-                      onChange={handleInputChange}
-                      className="hidden" 
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                  </label>
+                  {/* Muvafakatname (Sadece çiftçi için) */}
+                  {formData.userType === 'farmer' && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Muvafakatname
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Hisseli araziler için gereklidir
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.muvafakatname && (
+                          <p className="text-sm text-primary mt-2">{formData.muvafakatname.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="muvafakatname"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Taahhütname (Sadece çiftçi için) */}
+                  {formData.userType === 'farmer' && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Taahhütname
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Bakanlık matbu formu
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.taahhutname && (
+                          <p className="text-sm text-primary mt-2">{formData.taahhutname.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="taahhutname"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Döner Sermaye Ücret Makbuzu (Sadece çiftçi için) */}
+                  {formData.userType === 'farmer' && (
+                    <div>
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Döner Sermaye Ücret Makbuzu
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Başvuru ücreti ödeme belgesi
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.donerSermayeMakbuz && (
+                          <p className="text-sm text-primary mt-2">{formData.donerSermayeMakbuz.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="donerSermayeMakbuz"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* ŞİRKET İÇİN BELGELER */}
+              {formData.userType === 'company' && (
+                <div className="space-y-6">
+                  {/* Zorunlu Belgeler */}
+                  <div className="border-t border-border-light dark:border-border-dark pt-4">
+                    <h3 className="text-lg font-semibold text-content-light dark:text-content-dark mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">verified</span>
+                      Zorunlu Belgeler
+                    </h3>
+
+                    {/* Ticaret Sicil Gazetesi */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Ticaret Sicil Gazetesi *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Şirket kuruluş ve tescil belgesi
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.ticaretSicilGazetesi && (
+                          <p className="text-sm text-primary mt-2">{formData.ticaretSicilGazetesi.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="ticaretSicilGazetesi"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Vergi Levhası */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Vergi Levhası *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Şirketin vergi kaydını gösterir
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.vergiLevhasi && (
+                          <p className="text-sm text-primary mt-2">{formData.vergiLevhasi.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="vergiLevhasi"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+
+                    {/* İmza Sirküleri */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        İmza Sirküleri *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Yetkili imza örnekleri belgesi
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.imzaSirkuleri && (
+                          <p className="text-sm text-primary mt-2">{formData.imzaSirkuleri.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="imzaSirkuleri"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Faaliyet Belgesi */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Faaliyet Belgesi *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Ticaret veya Sanayi Odasından güncel faaliyet belgesi
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.faaliyetBelgesi && (
+                          <p className="text-sm text-primary mt-2">{formData.faaliyetBelgesi.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="faaliyetBelgesi"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Oda Kayıt Sicil Sureti */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Oda Kayıt Sicil Sureti *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Ticaret veya Sanayi Odasına kayıt belgesi
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.odaKayitSicilSureti && (
+                          <p className="text-sm text-primary mt-2">{formData.odaKayitSicilSureti.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="odaKayitSicilSureti"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Opsiyonel Belgeler */}
+                  <div className="border-t border-border-light dark:border-border-dark pt-4">
+                    <h3 className="text-lg font-semibold text-content-light dark:text-content-dark mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">add_circle</span>
+                      Opsiyonel Belgeler
+                    </h3>
+
+                    {/* Gıda İşletme Kayıt/Onay Belgesi */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Gıda İşletme Kayıt / Onay Belgesi
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Tarım Bakanlığından (Gıda işletmeleri için gerekli)
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.gidaIsletmeKayit && (
+                          <p className="text-sm text-primary mt-2">{formData.gidaIsletmeKayit.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="gidaIsletmeKayit"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Sanayi Sicil Belgesi */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Sanayi Sicil Belgesi
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Üretim yapan firmalar için gereklidir
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.sanayiSicilBelgesi && (
+                          <p className="text-sm text-primary mt-2">{formData.sanayiSicilBelgesi.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="sanayiSicilBelgesi"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Kapasite Raporu */}
+                    <div>
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Kapasite Raporu
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        Üretim yapan firmalar için gereklidir
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.kapasiteRaporu && (
+                          <p className="text-sm text-primary mt-2">{formData.kapasiteRaporu.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="kapasiteRaporu"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-between pt-6">
                 <button 
@@ -731,15 +1052,124 @@ function Kayit() {
 
                 <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-4">
                   <h3 className="font-semibold text-content-light dark:text-content-dark mb-3">Yüklenen Belgeler</h3>
-                  <p className="text-sm text-subtle-light dark:text-subtle-dark">
-                    {formData.tapuDocument && `Tapu: ${formData.tapuDocument.name}`}
-                  </p>
-                  <p className="text-sm text-subtle-light dark:text-subtle-dark">
-                    {formData.isletmeRuhsati && `İşletme Ruhsatı: ${formData.isletmeRuhsati.name}`}
-                  </p>
-                  <p className="text-sm text-subtle-light dark:text-subtle-dark">
-                    {formData.kimlikBelgesi && `Kimlik: ${formData.kimlikBelgesi.name}`}
-                  </p>
+                  
+                  {/* ÇİFTÇİ BELGELERİ */}
+                  {formData.userType === 'farmer' && (
+                    <>
+                      {/* Zorunlu Belgeler */}
+                      <div className="mb-3">
+                        <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Zorunlu Belgeler:</p>
+                        {formData.tapuOrKiraDocument && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            Tapu/Kira: {formData.tapuOrKiraDocument.name}
+                          </p>
+                        )}
+                        {formData.nufusCuzdani && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            Nüfus Cüzdanı: {formData.nufusCuzdani.name}
+                          </p>
+                        )}
+                        {formData.ciftciKutuguKaydi && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            Çiftçi Kütüğü: {formData.ciftciKutuguKaydi.name}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Opsiyonel Belgeler */}
+                      {(formData.muvafakatname || formData.taahhutname || formData.donerSermayeMakbuz) && (
+                        <div>
+                          <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Opsiyonel Belgeler:</p>
+                          {formData.muvafakatname && (
+                            <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                              <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                              Muvafakatname: {formData.muvafakatname.name}
+                            </p>
+                          )}
+                          {formData.taahhutname && (
+                            <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                              <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                              Taahhütname: {formData.taahhutname.name}
+                            </p>
+                          )}
+                          {formData.donerSermayeMakbuz && (
+                            <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                              <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                              Döner Sermaye Makbuzu: {formData.donerSermayeMakbuz.name}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* ŞİRKET BELGELERİ */}
+                  {formData.userType === 'company' && (
+                    <>
+                      {/* Zorunlu Belgeler */}
+                      <div className="mb-3">
+                        <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Zorunlu Belgeler:</p>
+                        {formData.ticaretSicilGazetesi && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            Ticaret Sicil Gazetesi: {formData.ticaretSicilGazetesi.name}
+                          </p>
+                        )}
+                        {formData.vergiLevhasi && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            Vergi Levhası: {formData.vergiLevhasi.name}
+                          </p>
+                        )}
+                        {formData.imzaSirkuleri && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            İmza Sirküleri: {formData.imzaSirkuleri.name}
+                          </p>
+                        )}
+                        {formData.faaliyetBelgesi && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            Faaliyet Belgesi: {formData.faaliyetBelgesi.name}
+                          </p>
+                        )}
+                        {formData.odaKayitSicilSureti && (
+                          <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                            Oda Kayıt Sicil Sureti: {formData.odaKayitSicilSureti.name}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Opsiyonel Belgeler */}
+                      {(formData.gidaIsletmeKayit || formData.sanayiSicilBelgesi || formData.kapasiteRaporu) && (
+                        <div>
+                          <p className="text-xs font-medium text-subtle-light dark:text-subtle-dark mb-1">Opsiyonel Belgeler:</p>
+                          {formData.gidaIsletmeKayit && (
+                            <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                              <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                              Gıda İşletme Kayıt: {formData.gidaIsletmeKayit.name}
+                            </p>
+                          )}
+                          {formData.sanayiSicilBelgesi && (
+                            <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                              <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                              Sanayi Sicil Belgesi: {formData.sanayiSicilBelgesi.name}
+                            </p>
+                          )}
+                          {formData.kapasiteRaporu && (
+                            <p className="text-sm text-content-light dark:text-content-dark flex items-center gap-2 mb-1">
+                              <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                              Kapasite Raporu: {formData.kapasiteRaporu.name}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 

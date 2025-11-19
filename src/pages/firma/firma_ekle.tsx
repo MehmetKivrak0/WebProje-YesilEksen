@@ -1,5 +1,4 @@
 import FrmNavbar from '../../components/frmnavbar';
-import Footer from '../../components/footer';
 
 function FirmaEkle() {
   return (
@@ -61,7 +60,6 @@ function FirmaEkle() {
           </form>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

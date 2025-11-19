@@ -15,9 +15,10 @@ export const initialFarmApplications: FarmApplication[] = [
       email: 'hilal.karaca@lalebahcesi.com',
     },
     documents: [
-      { name: 'Çiftlik Denetim Raporu', status: 'Beklemede', farmerNote: 'Denetmen raporu bekleniyor.' },
-      { name: 'Zirai Güvenlik Belgesi', status: 'Onaylandı', url: '/docs/lale-bahcesi-gvenlik.pdf' },
-      { name: 'Çevre Uyum Taahhüdü', status: 'Eksik' },
+      { name: 'Tapu Senedi veya Onaylı Kira Sözleşmesi', status: 'Onaylandı', url: '/docs/lale-bahcesi-tapu.pdf' },
+      { name: 'Nüfus Cüzdanı Fotokopisi', status: 'Onaylandı', url: '/docs/lale-bahcesi-nufus.pdf' },
+      { name: 'Çiftçi Kütüğü Kaydı', status: 'Beklemede', farmerNote: 'Ziraat Odasından güncel kayıt bekleniyor.' },
+      { name: 'Muvafakatname', status: 'Eksik' },
     ],
   },
   {
@@ -34,9 +35,11 @@ export const initialFarmApplications: FarmApplication[] = [
       email: 'yagiz.yildirim@goksuorganik.com',
     },
     documents: [
-      { name: 'Organik Üretim Sertifikası', status: 'Onaylandı', url: '/docs/goksu-organik-sertifika.pdf' },
-      { name: 'Su Kullanım İzni', status: 'Onaylandı', url: '/docs/su-kullanim-izni.pdf' },
-      { name: 'Hayvan Refahı Planı', status: 'Onaylandı', url: '/docs/hayvan-refahi-plani.pdf' },
+      { name: 'Tapu Senedi veya Onaylı Kira Sözleşmesi', status: 'Onaylandı', url: '/docs/goksu-tapu.pdf' },
+      { name: 'Nüfus Cüzdanı Fotokopisi', status: 'Onaylandı', url: '/docs/goksu-nufus.pdf' },
+      { name: 'Çiftçi Kütüğü Kaydı', status: 'Onaylandı', url: '/docs/goksu-ciftci-kutuğü.pdf' },
+      { name: 'Taahhütname', status: 'Onaylandı', url: '/docs/goksu-taahhutname.pdf' },
+      { name: 'Döner Sermaye Ücret Makbuzu', status: 'Onaylandı', url: '/docs/goksu-makbuz.pdf' },
     ],
   },
   {
@@ -53,9 +56,10 @@ export const initialFarmApplications: FarmApplication[] = [
       email: 'selim.demirtas@pamukovatarim.com',
     },
     documents: [
-      { name: 'Toprak Analiz Sonuçları', status: 'Eksik' },
-      { name: 'Hayvan Sağlık Kayıtları', status: 'Beklemede', farmerNote: 'Veteriner raporu eklenecek.' },
-      { name: 'ÇKS Kaydı', status: 'Beklemede', url: '/docs/pamukova-cks.pdf' },
+      { name: 'Tapu Senedi veya Onaylı Kira Sözleşmesi', status: 'Onaylandı', url: '/docs/pamukova-kira.pdf' },
+      { name: 'Nüfus Cüzdanı Fotokopisi', status: 'Onaylandı', url: '/docs/pamukova-nufus.pdf' },
+      { name: 'Çiftçi Kütüğü Kaydı', status: 'Beklemede', farmerNote: 'Güncel çiftçi kayıt belgesi bekleniyor.' },
+      { name: 'Muvafakatname', status: 'Eksik' },
     ],
   },
   {
@@ -72,9 +76,10 @@ export const initialFarmApplications: FarmApplication[] = [
       email: 'nisa.guler@bereketvadisi.com',
     },
     documents: [
-      { name: 'Çiftlik Tanıtım Formu', status: 'Beklemede', farmerNote: 'Güncel fotoğraflar yüklenecek.' },
-      { name: 'İş Sağlığı Planı', status: 'Beklemede' },
-      { name: 'Çevresel Etki Değerlendirmesi', status: 'Eksik' },
+      { name: 'Tapu Senedi veya Onaylı Kira Sözleşmesi', status: 'Beklemede', farmerNote: 'Noter onaylı kira sözleşmesi bekleniyor.' },
+      { name: 'Nüfus Cüzdanı Fotokopisi', status: 'Onaylandı', url: '/docs/bereket-nufus.pdf' },
+      { name: 'Çiftçi Kütüğü Kaydı', status: 'Beklemede' },
+      { name: 'Taahhütname', status: 'Eksik' },
     ],
   },
   {
@@ -91,9 +96,12 @@ export const initialFarmApplications: FarmApplication[] = [
       email: 'saim.bulut@guvenciftligi.com',
     },
     documents: [
-      { name: 'Tarımsal Üretim Planı', status: 'Onaylandı', url: '/docs/guven-ciftligi-uretimplani.pdf' },
-      { name: 'Atık Yönetim Protokolü', status: 'Onaylandı', url: '/docs/atik-yonetim-protokolu.pdf' },
-      { name: 'Zirai İlaç Envanteri', status: 'Onaylandı', url: '/docs/zirai-ilac-envanteri.pdf' },
+      { name: 'Tapu Senedi veya Onaylı Kira Sözleşmesi', status: 'Onaylandı', url: '/docs/guven-tapu.pdf' },
+      { name: 'Nüfus Cüzdanı Fotokopisi', status: 'Onaylandı', url: '/docs/guven-nufus.pdf' },
+      { name: 'Çiftçi Kütüğü Kaydı', status: 'Onaylandı', url: '/docs/guven-ciftci-kutuğü.pdf' },
+      { name: 'Muvafakatname', status: 'Onaylandı', url: '/docs/guven-muvafakatname.pdf' },
+      { name: 'Taahhütname', status: 'Onaylandı', url: '/docs/guven-taahhutname.pdf' },
+      { name: 'Döner Sermaye Ücret Makbuzu', status: 'Onaylandı', url: '/docs/guven-makbuz.pdf' },
     ],
   },
 ];
