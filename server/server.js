@@ -87,6 +87,9 @@ pool.on('error',(err)=>{
     process.exit(-1); 
     // Bu işe yarar: -1 ile sistemden çıkış yapılır
 });
+//Query şuna yarar:
+// PostgreSQL'e sorgu göndermek için
+// Query'nin başarılı olması için:
 const query = async (text, params) => {
     const start = Date.now();
     try {

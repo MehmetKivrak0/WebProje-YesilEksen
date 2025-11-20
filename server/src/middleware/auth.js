@@ -94,3 +94,31 @@ const checkRole = (...roles) => {
 };
 
 module.exports = { auth, checkRole};
+
+// JWT Token Oluşturma
+
+const generateToken = (payloud) => {
+    return  jwt.sign(payloud,process.env.JWT_SECRET,{
+        expiresIn : process.env.JWT_EXPIRE || '1h'
+    });
+};
+// JWT Token Doğrulama
+
+const verifyToken = (token) => {
+    try {
+        return jwt.verify(token,process.env.JWT_SECRET);
+        //JWT_SECRET ne işe yarar?
+        //JWT_SECRET, token'ı doğrularken kullanılır.
+    } catch (error) {
+        throw new Error('Token doğrulama hatası');
+    }
+}
+
+
+// tokendan kullanıcı bilgilerini çıkar 
+
+const decodeToken = (token) => {
+    return jwt.decode(token);
+}
+
+module.exports = { generateToken, verifyToken, decodeToken };

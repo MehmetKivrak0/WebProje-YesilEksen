@@ -1,0 +1,36 @@
+### ===========================================
+### YEŞİL-EKSEN API TESTLERİ
+### ===========================================
+
+### Test 1: Health Check (Backend çalışıyor mu?)
+GET http://localhost:5000/api/health
+
+### Test 2: Register (Yeni Kullanıcı Kaydı)
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "Ahmet",
+  "lastName": "Yılmaz",
+  "email": "ahmet@test.com",
+  "password": "123456",
+  "userType": "farmer",
+  "phone": "+90 532 123 45 67",
+  "terms": true
+}
+
+### Test 3: Login (Giriş - ÖNEMLİ: Bu testten TOKEN alacaksın!)
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ciftci@test.com",
+  "password": "123456"
+}
+
+### Test 4: Get Me (Token ile Kullanıcı Bilgisi)
+### ⚠️ Yukarıdaki Login testinden aldığın TOKEN'ı aşağıya yapıştır!
+GET http://localhost:5000/api/auth/me
+Authorization: Bearer BURAYA_TOKEN_YAPIŞTIR
+
+

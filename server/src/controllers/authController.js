@@ -1,55 +1,58 @@
-// Auth Controller (register, login, forgot-password, refresh-token)
+const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
-const { query } = require('../config/database');
-const { generateToken, verifyToken } = require('../utils/jwtHelper');
+const { generateToken } = require('../utils/jwtHelper');
 
-//Register Controller Kayıt Olma İşlemi
+/**
+ * Kullanıcı kaydı
+ * POST /api/auth/register
+ */
 const register = async (req, res) => {
+    const client = await pool.connect();
+    
     try {
         const {
             firstName,
             lastName,
             email,
             password,
-            userType,
+            userType, // 'farmer', 'company', 'ziraat', 'sanayi'
             phone,
-            terms  // Kullanım şartları kabul edildi mi?
-        } = req.body; //Form verileri
+            terms
+        } = req.body;
 
-        //Validasyon
-        if (!firstName || !lastName || !email || !password || !userType) {
+        // Validasyon
+        if (!firstName || !lastName || !email || !password || !userType || !phone) {
             return res.status(400).json({
                 success: false,
-                message: 'Tüm zorunlu alanları doldurun'
+                message: 'Tüm alanları doldurunuz'
             });
         }
+
         if (!terms) {
             return res.status(400).json({
                 success: false,
-                message: 'Kullanım şartlarını kabul etmediniz'
+                message: 'Şartları kabul etmelisiniz'
             });
         }
-        //Email Kontrolü
-        const usercheck = await query('SELECT * FROM users WHERE email = $1', [email]);
-        if (usercheck.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Bu email adresi zaten kullanılmış'
-            });
-        }
-        // Telefon Kontrolü
-        const phonecheck = await query('SELECT * FROM users WHERE phone = $1', [phone]);
-        if (phonecheck.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Bu telefon numarası zaten kullanılmış'
-            });
-        }
-        // Şifreyi Hashleme
-        const hashedPassword = await bcrypt.hash(password, 10);
 
-        //Rol Belirleme
-        // Rol belirleme
+        // Email kontrolü
+        const emailCheck = await pool.query(
+            'SELECT id FROM kullanicilar WHERE eposta = $1',
+            [email]
+        );
+
+        if (emailCheck.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Bu email adresi zaten kayıtlı'
+            });
+        }
+
+        // Şifreyi hashle
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        // Kullanıcı rolünü belirle
         let rol = 'ciftci'; // default
 
         if (userType === 'farmer' || userType === 'ciftci') {
@@ -68,46 +71,145 @@ const register = async (req, res) => {
             });
         }
 
-        //Kullanıcı Bilgilerini Veritabanına Kaydet
-        const result = await query(
-            `INSERT INTO kullanicilar (
-      ad, 
-      soyad, 
-      eposta, 
-      sifre_hash, 
-      telefon,
-      rol, 
-      durum,
-      eposta_dogrulandi,
-      sartilar_kabul,
-      sartilar_kabul_tarihi,
-      olusturma
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
-    RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
-            [
-                firstName,
-                lastName,
-                email,
-                hashedPassword,
-                phone || null,
-                rol,
-                'beklemede', // Durum: yönetici onayı bekliyor
-                false, // Email doğrulanmadı
-                true, // Şartlar kabul edildi
-                new Date() // Şartlar kabul tarihi
-            ]
+        await client.query('BEGIN');
+
+        // Kullanıcı oluştur
+        const userResult = await client.query(
+            `INSERT INTO kullanicilar 
+            (ad, soyad, eposta, sifre_hash, telefon, rol, durum, eposta_dogrulandi, sartlar_kabul, sartlar_kabul_tarihi)
+            VALUES ($1, $2, $3, $4, $5, $6, 'beklemede', FALSE, TRUE, CURRENT_TIMESTAMP)
+            RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
+            [firstName, lastName, email, hashedPassword, phone, rol]
         );
+
+        const user = userResult.rows[0];
+
+        // Rol'e göre ilgili tabloya kayıt ekle
+        if (rol === 'ciftci') {
+            await client.query(
+                `INSERT INTO ciftlikler (kullanici_id, ad, durum)
+                VALUES ($1, $2, 'beklemede')`,
+                [user.id, `${firstName} ${lastName}'nin Çiftliği`]
+            );
+        } else if (rol === 'firma') {
+            await client.query(
+                `INSERT INTO firmalar (kullanici_id, ad, durum)
+                VALUES ($1, $2, 'beklemede')`,
+                [user.id, `${firstName} ${lastName} Firma`]
+            );
+        } else if (rol === 'ziraat_yoneticisi') {
+            await client.query(
+                `INSERT INTO ziraat_odalari (kullanici_id, ad, durum)
+                VALUES ($1, $2, 'beklemede')`,
+                [user.id, `${firstName} ${lastName} - Ziraat Odası`]
+            );
+        } else if (rol === 'sanayi_yoneticisi') {
+            await client.query(
+                `INSERT INTO sanayi_odalari (kullanici_id, ad, durum)
+                VALUES ($1, $2, 'beklemede')`,
+                [user.id, `${firstName} ${lastName} - Sanayi Odası`]
+            );
+        }
+
+        await client.query('COMMIT');
+
+        res.status(201).json({
+            success: true,
+            message: 'Kayıt başarılı! Admin onayı bekleniyor.',
+            user: {
+                id: user.id,
+                ad: user.ad,
+                soyad: user.soyad,
+                eposta: user.eposta,
+                rol: user.rol,
+                durum: user.durum
+            }
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Register hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Kayıt sırasında bir hata oluştu'
+        });
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * Kullanıcı girişi
+ * POST /api/auth/login
+ */
+const login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Validasyon
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email ve şifre gerekli'
+            });
+        }
+
+        // Kullanıcıyı bul
+        const result = await pool.query(
+            `SELECT id, ad, soyad, eposta, sifre_hash, telefon, rol, durum, eposta_dogrulandi
+            FROM kullanicilar 
+            WHERE eposta = $1`,
+            [email]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({
+                success: false,
+                message: 'Email veya şifre hatalı'
+            });
+        }
+
         const user = result.rows[0];
 
-        //Token Oluşturma
-        // Token Oluşturma (MİNİMAL)
+        // Şifre kontrolü
+        const isPasswordValid = await bcrypt.compare(password, user.sifre_hash);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: 'Email veya şifre hatalı'
+            });
+        }
+
+        // Kullanıcı durumu kontrolü
+        if (user.durum === 'beklemede') {
+            return res.status(403).json({
+                success: false,
+                message: 'Hesabınız admin onayı bekliyor'
+            });
+        }
+
+        if (user.durum === 'pasif') {
+            return res.status(403).json({
+                success: false,
+                message: 'Hesabınız pasif durumda'
+            });
+        }
+
+        // Token oluştur
         const token = generateToken({
             id: user.id,
             email: user.eposta,
             rol: user.rol
         });
 
-        res.status(200).json({
+        // Son giriş zamanını güncelle
+        await pool.query(
+            'UPDATE kullanicilar SET son_giris = CURRENT_TIMESTAMP WHERE id = $1',
+            [user.id]
+        );
+
+        res.json({
             success: true,
             message: 'Giriş başarılı',
             token,
@@ -115,44 +217,81 @@ const register = async (req, res) => {
                 id: user.id,
                 ad: user.ad,
                 soyad: user.soyad,
-                email: user.eposta,
+                eposta: user.eposta,
                 telefon: user.telefon,
                 rol: user.rol,
-                durum: user.durum,
-                eposta_dogrulandi: user.eposta_dogrulandi,
-                avatar_url: user.avatar_url
+                durum: user.durum
             }
         });
 
     } catch (error) {
-        console.error('Giriş hatası:', error);
+        console.error('Login hatası:', error);
         res.status(500).json({
             success: false,
-            message: 'Giriş sırasında hata oluştu',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-}
-
-// Token Yenileme
-const refreshToken = async (req, res) => {
-    try {
-        // TODO: Refresh token mantığı eklenecek
-        res.status(200).json({
-            success: true,
-            message: 'Token yenilendi'
-        });
-    } catch (error) {
-        console.error('Token yenileme hatası:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Token yenileme hatası'
+            message: 'Giriş sırasında bir hata oluştu'
         });
     }
 };
+
+/**
+ * Mevcut kullanıcı bilgisi
+ * GET /api/auth/me
+ */
+const getMe = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const result = await pool.query(
+            `SELECT id, ad, soyad, eposta, telefon, rol, durum, olusturma_tarihi, son_giris
+            FROM kullanicilar 
+            WHERE id = $1`,
+            [userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Kullanıcı bulunamadı'
+            });
+        }
+
+        res.json({
+            success: true,
+            user: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('GetMe hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Kullanıcı bilgisi alınamadı'
+        });
+    }
+};
+
+/**
+ * Çıkış
+ * POST /api/auth/logout
+ */
+const logout = async (req, res) => {
+    try {
+        // Client-side'da token silinecek
+        res.json({
+            success: true,
+            message: 'Çıkış başarılı'
+        });
+    } catch (error) {
+        console.error('Logout hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Çıkış sırasında bir hata oluştu'
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
-    forgotPassword,
-    refreshToken
+    getMe,
+    logout
 };
