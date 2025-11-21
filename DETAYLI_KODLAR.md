@@ -172,7 +172,7 @@ const register = async (req, res) => {
             lastName,
             email,
             password,
-            userType, // 'farmer' veya 'company'
+            userType, // 'farmer', 'company', 'ziraat', 'sanayi'
             phone,
             terms
         } = req.body;
@@ -210,7 +210,23 @@ const register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         // Kullanıcı rolünü belirle
-        const rol = userType === 'farmer' ? 'ciftci' : 'firma';
+        let rol = 'ciftci'; // default
+
+        if (userType === 'farmer' || userType === 'ciftci') {
+            rol = 'ciftci';
+        } else if (userType === 'company' || userType === 'firma') {
+            rol = 'firma';
+        } else if (userType === 'sanayi' || userType === 'sanayi_odasi') {
+            rol = 'sanayi_yoneticisi';
+        } else if (userType === 'ziraat' || userType === 'ziraat_odasi') {
+            rol = 'ziraat_yoneticisi';
+        } else {
+            // Geçersiz userType
+            return res.status(400).json({
+                success: false,
+                message: 'Geçersiz kullanıcı tipi. Seçenekler: farmer, company, sanayi, ziraat'
+            });
+        }
 
         await client.query('BEGIN');
 
@@ -228,16 +244,24 @@ const register = async (req, res) => {
         // Rol'e göre ilgili tabloya kayıt ekle
         if (rol === 'ciftci') {
             await client.query(
-                `INSERT INTO ciftlikler (kullanici_id, ad, durum)
-                VALUES ($1, $2, 'beklemede')`,
-                [user.id, `${firstName} ${lastName}'nin Çiftliği`]
+                `INSERT INTO ciftlikler (kullanici_id, ad, adres, durum)
+                VALUES ($1, $2, $3, 'beklemede')`,
+                [user.id, `${firstName} ${lastName}'nin Çiftliği`, 'Belirtilmemiş']
             );
         } else if (rol === 'firma') {
+            // Geçici vergi no oluştur (user.id bazlı)
+            const tempVergiNo = `TEMP-${user.id.substring(0, 8)}`;
             await client.query(
-                `INSERT INTO firmalar (kullanici_id, ad, durum)
-                VALUES ($1, $2, 'beklemede')`,
-                [user.id, `${firstName} ${lastName} Firma`]
+                `INSERT INTO firmalar (kullanici_id, ad, vergi_no, adres, durum)
+                VALUES ($1, $2, $3, $4, 'beklemede')`,
+                [user.id, `${firstName} ${lastName} Firma`, tempVergiNo, 'Belirtilmemiş']
             );
+        } else if (rol === 'ziraat_yoneticisi') {
+            // Ziraat yöneticisi için ayrı tablo yok, sadece kullanici kaydı yeterli
+            console.log('Ziraat yöneticisi kaydedildi:', user.id);
+        } else if (rol === 'sanayi_yoneticisi') {
+            // Sanayi yöneticisi için ayrı tablo yok, sadece kullanici kaydı yeterli
+            console.log('Sanayi yöneticisi kaydedildi:', user.id);
         }
 
         await client.query('COMMIT');
@@ -1014,7 +1038,58 @@ module.exports = {
 
 ## 📁 Frontend Kodları
 
-### 6. Auth Service
+### 6. API Client (Axios)
+**Dosya:** `src/services/api.ts`
+
+```typescript
+import axios from 'axios';
+
+// API base URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+// Axios instance oluştur
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
+
+// Request interceptor - Token'ı her istekte ekle
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Response interceptor - Hata yönetimi
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token geçersiz veya süresi dolmuş
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
+export default api;
+```
+
+---
+
+### 7. Auth Service
 **Dosya:** `src/services/authService.ts`
 
 ```typescript
@@ -1030,7 +1105,7 @@ export interface RegisterData {
     lastName: string;
     email: string;
     password: string;
-    userType: 'farmer' | 'company';
+    userType: 'farmer' | 'company' | 'ziraat' | 'sanayi';
     phone: string;
     terms: boolean;
 }
@@ -1041,7 +1116,7 @@ export interface User {
     soyad: string;
     eposta: string;
     telefon: string;
-    rol: 'ciftci' | 'firma' | 'ziraat_admin' | 'sanayi_admin';
+    rol: 'ciftci' | 'firma' | 'ziraat_yoneticisi' | 'sanayi_yoneticisi';
     durum: string;
 }
 

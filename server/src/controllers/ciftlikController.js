@@ -1,4 +1,3 @@
-const { Await } = require('react-router-dom');
 const { pool } = require('../config/database');
 
 //Çİftlik Panel İstatistikleri kısmı
@@ -65,7 +64,7 @@ const getPanelStats = async (req, res) => {
             WHERE u.ciftlik_id = $1
             ORDER BY s.olusturma_tarihi DESC
             LIMIT 5`,
-            [ciftlikId]
+            [ciftlik_id]
         );
 
         res.json({
@@ -182,11 +181,11 @@ const getMyProducts = async (req, res) => {
         res.json({
             success: true,
             products: result.rows,
-            pagination:{
-               page:parseInt(page),
-               limit:parseInt(limit),
-               total:totalCount,
-               totalPages:Math.ceil(totalCount / limit)
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limit)
             }
         });
     } catch (error) {
@@ -200,3 +199,155 @@ const getMyProducts = async (req, res) => {
 
 
 //Yeni Ürün Ekleme
+
+const addProduct = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { title, miktar, price, category, desc, birim = 'kg' } = req.body;
+
+        if (!title || !miktar || !price || !category || !desc) {
+            return res.status(400).json({
+                success: false,
+                message: 'Gerekli alanları doldurunuz'
+            });
+        }
+
+        //Çiftlik id'sini bul
+        const citflikResult = await pool.query('SELECT id FROM ciftlikler WHERE kullanici_id = $1', [userId]);
+        if (citflikResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftlik bulunamadı'
+            });
+        }
+        const ciftlik_id = citflikResult.rows[0].id;
+
+        //ürün oluştur
+        const result = await pool.query(
+            `INSERT INTO urunler 
+            (ciftlik_id, baslik, aciklama, miktar, birim, fiyat, kategori, durum)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, 'aktif')
+            RETURNING *`,
+            [ciftlik_id, title, desc, miktar, birim, price, category]
+        );
+
+        res.json({
+            success: true,
+            message: 'Ürün başarıyla oluşturuldu',
+            product: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Add product hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ürün eklenemedi'
+        });
+    }
+};
+
+//Ürün Güncelleme
+const updateProduct = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const productId = req.params.id;
+        const { title, miktar, price, category, desc, birim, durum } = req.body;
+
+        //çiftlik id'sini bul
+        const citflikResult = await pool.query('SELECT id FROM ciftlikler WHERE kullanici_id = $1', [userId]);
+
+        if (citflikResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftlik bulunamadı'
+            });
+        }
+        const ciftlik_id = citflikResult.rows[0].id;
+
+        //Ürün bu çiftliğe mi ait kontrol et 
+        const productCheck = await pool.query('SELECT id FROM urunler WHERE id = $1 AND ciftlik_id = $2', [productId, ciftlik_id]);
+        if (productCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Ürün bulunamadı veya çiftliğinize ait değil'
+            });
+        }
+
+        //Ürünü güncelle
+        const result = await pool.query(
+            `UPDATE urunler 
+            SET baslik = $1, aciklama = $2, miktar = $3, birim = $4, fiyat = $5, kategori = $6, durum = $7
+            WHERE id = $8 AND ciftlik_id = $9
+            RETURNING *`,
+            [title, desc, miktar, birim, price, category, durum, productId, ciftlik_id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Ürün başarıyla güncellendi',
+            product: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Update product hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ürün güncellenemedi'
+        });
+    }
+};
+
+//Ürün Silme
+const deleteProduct = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const productId = req.params.id;
+
+        //çiftlik id'sini bul
+        const citflikResult = await pool.query('SELECT id FROM ciftlikler WHERE kullanici_id = $1', [userId]);
+
+        if (citflikResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftlik bulunamadı'
+            });
+        }
+        const ciftlik_id = citflikResult.rows[0].id;
+
+        //Ürünü soft delete yap (durum = 'silindi')
+        const result = await pool.query(
+            `UPDATE urunler 
+            SET durum = 'silindi'
+            WHERE id = $1 AND ciftlik_id = $2
+            RETURNING *`,
+            [productId, ciftlik_id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Ürün bulunamadı'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Ürün başarıyla silindi'
+        });
+
+    } catch (error) {
+        console.error('Delete product hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ürün silinemedi'
+        });
+    }
+};
+module.exports = {
+    getPanelStats,
+    getMyProducts,
+    addProduct,
+    updateProduct,
+    deleteProduct
+};
+

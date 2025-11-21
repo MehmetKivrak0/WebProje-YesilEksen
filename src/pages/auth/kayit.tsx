@@ -1,9 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, type FormEvent } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { authService } from '../../services/authService';
+import TermsModal from '../../components/TermsModal';
+import PrivacyModal from '../../components/PrivacyModal';
+import Toast from '../../components/Toast';
 
 function Kayit() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'success' as 'success' | 'error' | 'info', isVisible: false });
   const [formData, setFormData] = useState({
     // Step 1: Temel Bilgiler
     firstName: '',
@@ -39,6 +49,12 @@ function Kayit() {
     kapasiteRaporu: null as File | null, // Kapasite Raporu (Opsiyonel)
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+  });
 
   // URL parametrelerinden gelen verileri formData'ya yükle
   useEffect(() => {
@@ -59,14 +75,130 @@ function Kayit() {
     }
   }, [searchParams]);
 
+  // Telefon numarası formatlama fonksiyonu
+  const formatPhoneNumber = (value: string): string => {
+    // Sadece sayıları al
+    const numbers = value.replace(/[^0-9]/g, '');
+    
+    // +90 ile başlıyorsa kaldır (Türkiye kodu)
+    let cleanNumbers = numbers;
+    if (numbers.startsWith('90') && numbers.length > 10) {
+      cleanNumbers = numbers.substring(2);
+    }
+    
+    // Maksimum 10 haneli numara
+    const limitedNumbers = cleanNumbers.substring(0, 10);
+    
+    // Format: (5XX) XXX-XX-XX
+    if (limitedNumbers.length === 0) return '';
+    if (limitedNumbers.length <= 3) return `(${limitedNumbers}`;
+    if (limitedNumbers.length <= 6) return `(${limitedNumbers.substring(0, 3)}) ${limitedNumbers.substring(3)}`;
+    if (limitedNumbers.length <= 8) return `(${limitedNumbers.substring(0, 3)}) ${limitedNumbers.substring(3, 6)}-${limitedNumbers.substring(6)}`;
+    return `(${limitedNumbers.substring(0, 3)}) ${limitedNumbers.substring(3, 6)}-${limitedNumbers.substring(6, 8)}-${limitedNumbers.substring(8)}`;
+  };
+
+  // Sadece sayı girişi için handler
+  const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Telefon için sayılar ve + karakteri, vergi numarası için sadece sayılar
+    let numericValue: string;
+    if (name === 'phone') {
+      // Telefon için formatlama yap
+      numericValue = formatPhoneNumber(value);
+    } else {
+      // Vergi numarası ve diğer sayısal alanlar için sadece sayılar
+      numericValue = value.replace(/[^0-9]/g, '');
+    }
+    setFormData(prev => ({ ...prev, [name]: numericValue }));
+  };
+
+  // Şifre validasyonu
+  const validatePassword = (password: string) => {
+    const errors = {
+      minLength: password.length >= 8,
+      hasUpperCase: /[A-Z]/.test(password),
+      hasLowerCase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+    };
+    setPasswordErrors(errors);
+    return Object.values(errors).every(Boolean);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    
+    // Şifre değiştiğinde validasyon yap
+    if (name === 'password' && type !== 'file') {
+      validatePassword(value);
+    }
+    
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else if (type === 'file') {
       const file = (e.target as HTMLInputElement).files?.[0] || null;
-      setFormData(prev => ({ ...prev, [name]: file }));
+      
+      // Belge yüklendiğinde validasyon yap ve bildirim göster
+      if (file) {
+        const belgeIsimleri: { [key: string]: string } = {
+          tapuOrKiraDocument: 'Tapu Senedi veya Kira Sözleşmesi',
+          nufusCuzdani: 'Nüfus Cüzdanı',
+          ciftciKutuguKaydi: 'Çiftçi Kütüğü Kaydı',
+          muvafakatname: 'Muvafakatname',
+          taahhutname: 'Taahhütname',
+          donerSermayeMakbuz: 'Döner Sermaye Makbuzu',
+          ticaretSicilGazetesi: 'Ticaret Sicil Gazetesi',
+          vergiLevhasi: 'Vergi Levhası',
+          imzaSirkuleri: 'İmza Sirküleri',
+          faaliyetBelgesi: 'Faaliyet Belgesi',
+          odaKayitSicilSureti: 'Oda Kayıt Sicil Sureti',
+          gidaIsletmeKayit: 'Gıda İşletme Kayıt Belgesi',
+          sanayiSicilBelgesi: 'Sanayi Sicil Belgesi',
+          kapasiteRaporu: 'Kapasite Raporu'
+        };
+        
+        const belgeAdi = belgeIsimleri[name] || 'Belge';
+        const fileSizeMB = file.size / (1024 * 1024);
+        const maxSizeMB = 5; // 5MB maksimum
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+        const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+        
+        // Validasyon kontrolleri
+        let errorMessage = '';
+        
+        // Dosya boyutu kontrolü
+        if (fileSizeMB > maxSizeMB) {
+          errorMessage = `${belgeAdi} dosyası çok büyük! Maksimum ${maxSizeMB}MB olmalıdır. (Mevcut: ${fileSizeMB.toFixed(2)}MB)`;
+        }
+        // Dosya tipi kontrolü
+        else if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension || '')) {
+          errorMessage = `${belgeAdi} için geçersiz dosya formatı! Sadece PDF, JPG, JPEG ve PNG dosyaları yüklenebilir.`;
+        }
+        
+        // Hata varsa göster ve dosyayı yükleme
+        if (errorMessage) {
+          setToast({
+            message: errorMessage,
+            type: 'error',
+            isVisible: true
+          });
+          // Input'u temizle
+          (e.target as HTMLInputElement).value = '';
+          return;
+        }
+        
+        // Başarılı yükleme
+        setFormData(prev => ({ ...prev, [name]: file }));
+        setToast({
+          message: `${belgeAdi} başarıyla yüklendi (${fileSizeMB.toFixed(2)} MB)`,
+          type: 'success',
+          isVisible: true
+        });
+      } else {
+        // Dosya seçimi iptal edildi
+        setFormData(prev => ({ ...prev, [name]: null }));
+      }
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -89,13 +221,34 @@ function Kayit() {
       
       // Validasyon
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.userType || !formData.terms) {
-        alert('Lütfen tüm alanları doldurun ve kullanım şartlarını kabul edin.');
+        setToast({
+          message: 'Lütfen tüm alanları doldurun ve kullanım şartlarını kabul edin.',
+          type: 'error',
+          isVisible: true
+        });
         return;
       }
       
       if (isPasswordRequired && !formData.password) {
-        alert('Lütfen şifre alanını doldurun.');
+        setToast({
+          message: 'Lütfen şifre alanını doldurun.',
+          type: 'error',
+          isVisible: true
+        });
         return;
+      }
+      
+      // Şifre validasyonu kontrolü
+      if (isPasswordRequired && formData.password) {
+        const isValid = validatePassword(formData.password);
+        if (!isValid) {
+          setToast({
+            message: 'Şifre en az 8 karakter olmalı, büyük harf, küçük harf ve sayı içermelidir.',
+            type: 'error',
+            isVisible: true
+          });
+          return;
+        }
       }
     }
     if (currentStep < 4) {
@@ -109,17 +262,165 @@ function Kayit() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleStepClick = (stepNumber: number) => {
+    // Progress bar'daki step.number direkt currentStep ile eşleşiyor
+    setCurrentStep(stepNumber);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // Form gönderme işlemi burada yapılacak
-    console.log('Form Data:', formData);
-    alert('Kayıt başarıyla tamamlandı!');
+    setError('');
+    setLoading(true);
+
+    try {
+      // Şifre kontrolü - Sosyal medya girişi için opsiyonel ama normal kayıt için zorunlu
+      const provider = searchParams.get('provider');
+      if (!provider && !formData.password) {
+        setError('Lütfen şifre alanını doldurun.');
+        setLoading(false);
+        return;
+      }
+      
+      // Şifre validasyonu kontrolü
+      if (!provider && formData.password) {
+        const isValid = validatePassword(formData.password);
+        if (!isValid) {
+          setError('Şifre en az 8 karakter olmalı, büyük harf, küçük harf ve sayı içermelidir.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Zorunlu belgeler kontrolü
+      const missingDocuments: string[] = [];
+      
+      if (formData.userType === 'farmer') {
+        // Çiftçi için zorunlu belgeler
+        if (!formData.tapuOrKiraDocument) {
+          missingDocuments.push('Tapu Senedi veya Onaylı Kira Sözleşmesi');
+        }
+        if (!formData.nufusCuzdani) {
+          missingDocuments.push('Nüfus Cüzdanı Fotokopisi');
+        }
+        if (!formData.ciftciKutuguKaydi) {
+          missingDocuments.push('Çiftçi Kütüğü Kaydı');
+        }
+      } else if (formData.userType === 'company') {
+        // Şirket için zorunlu belgeler
+        if (!formData.ticaretSicilGazetesi) {
+          missingDocuments.push('Ticaret Sicil Gazetesi');
+        }
+        if (!formData.vergiLevhasi) {
+          missingDocuments.push('Vergi Levhası');
+        }
+        if (!formData.imzaSirkuleri) {
+          missingDocuments.push('İmza Sirküleri');
+        }
+        if (!formData.faaliyetBelgesi) {
+          missingDocuments.push('Faaliyet Belgesi');
+        }
+        if (!formData.odaKayitSicilSureti) {
+          missingDocuments.push('Oda Kayıt Sicil Sureti');
+        }
+      }
+      
+      // Eksik belgeler varsa uyarı ver
+      if (missingDocuments.length > 0) {
+        setToast({
+          message: `Lütfen zorunlu belgeleri yükleyin: ${missingDocuments.join(', ')}`,
+          type: 'error',
+          isVisible: true
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Register verilerini hazırla
+      // Telefon numarasını temizle (sadece sayılar)
+      const cleanPhone = formData.phone.replace(/[^0-9]/g, '');
+      
+      const registerData: any = {
+        // Temel bilgiler
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password || 'temp_password_' + Date.now(), // Sosyal medya için geçici şifre
+        userType: formData.userType as 'farmer' | 'company' | 'ziraat' | 'sanayi',
+        phone: cleanPhone,
+        terms: formData.terms
+      };
+
+      // Kullanıcı tipine göre bilgileri ekle
+      if (formData.userType === 'farmer') {
+        // Çiftlik bilgileri
+        registerData.farmName = formData.farmName;
+        registerData.address = formData.address;
+        registerData.wasteTypes = formData.wasteTypes;
+        if (formData.otherWasteType) {
+          registerData.otherWasteType = formData.otherWasteType;
+        }
+        
+        // Çiftçi belgeleri
+        registerData.tapuOrKiraDocument = formData.tapuOrKiraDocument;
+        registerData.nufusCuzdani = formData.nufusCuzdani;
+        registerData.ciftciKutuguKaydi = formData.ciftciKutuguKaydi;
+        registerData.muvafakatname = formData.muvafakatname;
+        registerData.taahhutname = formData.taahhutname;
+        registerData.donerSermayeMakbuz = formData.donerSermayeMakbuz;
+
+      } else if (formData.userType === 'company') {
+        // Şirket bilgileri
+        registerData.companyName = formData.companyName;
+        registerData.taxNumber = formData.taxNumber;
+        registerData.address = formData.address;
+        
+        // Şirket belgeleri
+        registerData.ticaretSicilGazetesi = formData.ticaretSicilGazetesi;
+        registerData.vergiLevhasi = formData.vergiLevhasi;
+        registerData.imzaSirkuleri = formData.imzaSirkuleri;
+        registerData.faaliyetBelgesi = formData.faaliyetBelgesi;
+        registerData.odaKayitSicilSureti = formData.odaKayitSicilSureti;
+        registerData.gidaIsletmeKayit = formData.gidaIsletmeKayit;
+        registerData.sanayiSicilBelgesi = formData.sanayiSicilBelgesi;
+        registerData.kapasiteRaporu = formData.kapasiteRaporu;
+      }
+
+      // Kayıt işlemini başlat
+      await authService.register(registerData);
+
+      setToast({
+        message: 'Kayıt başarılı! Admin onayı bekleniyor.',
+        type: 'success',
+        isVisible: true
+      });
+      
+      // Toast mesajını gösterdikten sonra yönlendir
+      setTimeout(() => {
+        navigate('/giris');
+      }, 2000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Kayıt başarısız';
+      const missingFields = err.response?.data?.missing;
+      
+      if (missingFields) {
+        const missingList = Object.entries(missingFields)
+          .filter(([_, isMissing]) => isMissing)
+          .map(([field]) => field)
+          .join(', ');
+        setError(`${errorMessage} (Eksik alanlar: ${missingList})`);
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const steps = [
-    { number: 1, label: formData.userType === 'farmer' ? 'Çiftlik Bilgileri' : 'Şirket Bilgileri' },
-    { number: 2, label: 'Belge Yükleme' },
-    { number: 3, label: 'Onay' },
+    { number: 1, label: 'Hesap Bilgileri' },
+    { number: 2, label: formData.userType === 'farmer' ? 'Çiftlik Bilgileri' : 'Şirket Bilgileri' },
+    { number: 3, label: 'Belge Yükleme' },
+    { number: 4, label: 'Onay' },
   ];
 
   return (
@@ -135,31 +436,39 @@ function Kayit() {
           </div>
           <h2 className="text-3xl font-bold text-content-light dark:text-content-dark">Hesap Oluşturun</h2>
           <p className="mt-2 text-sm text-subtle-light dark:text-subtle-dark">
-            Zaten hesabınız var mı? 
-            <a href="/giris" className="font-medium text-primary hover:text-primary/80 transition-colors"> Giriş yapın</a>
+            Zaten hesabınız var mı?{' '}
+            <Link to="/giris" className="font-medium text-primary hover:text-primary/80 transition-colors">Giriş yapın</Link>
           </p>
           <p className="mt-1 text-sm text-subtle-light dark:text-subtle-dark">
-            <a href="/" className="font-medium text-primary hover:text-primary/80 transition-colors">← Anasayfaya Dön</a>
+            <Link to="/" className="font-medium text-primary hover:text-primary/80 transition-colors">← Anasayfaya Dön</Link>
           </p>
         </div>
 
         {/* Adım Göstergesi */}
-        {currentStep > 1 && (
-          <div className="mb-8">
-            <div className="flex items-center justify-center">
-              <div className="flex items-center space-x-4">
-                {steps.map((step, index) => {
-                  // Progress bar'da gösterilecek adım numarası: currentStep - 1 (çünkü ilk adım progress bar'da yok)
-                  const displayStep = currentStep - 1;
-                  const isActive = displayStep >= step.number;
-                  const isCompleted = displayStep > step.number;
+        <div className="mb-8">
+          <div className="flex items-center justify-center">
+            <div className="flex items-center space-x-4">
+              {steps.map((step, index) => {
+                const isActive = currentStep >= step.number;
+                const isCompleted = currentStep > step.number;
+                const isClickable = step.number <= currentStep; // Sadece kendinden önceki adımlara tıklanabilir
                   
                   return (
                     <div key={step.number} className="flex items-center">
-                      <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      <div 
+                        className={`flex items-center transition-opacity ${
+                          isClickable 
+                            ? 'cursor-pointer hover:opacity-80' 
+                            : 'cursor-not-allowed opacity-50'
+                        }`}
+                        onClick={isClickable ? () => handleStepClick(step.number) : undefined}
+                        title={isClickable ? `${step.label} adımına git` : 'Bu adıma henüz ulaşmadınız'}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                           isActive
                             ? 'bg-primary text-white'
+                            : isClickable
+                            ? 'bg-border-light dark:bg-border-dark text-subtle-light dark:text-subtle-dark hover:bg-primary/20'
                             : 'bg-border-light dark:bg-border-dark text-subtle-light dark:text-subtle-dark'
                         }`}>
                           {step.number}
@@ -185,7 +494,6 @@ function Kayit() {
               </div>
             </div>
           </div>
-        )}
 
         {/* Form İçeriği */}
         <form onSubmit={handleSubmit} className="bg-background-light dark:bg-background-dark rounded-xl p-8 border border-border-light dark:border-border-dark">
@@ -193,6 +501,13 @@ function Kayit() {
           {currentStep === 1 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-content-light dark:text-content-dark mb-6">Hesap Bilgileri</h2>
+              
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
               
               <div className="space-y-4">
                 {/* Ad */}
@@ -287,6 +602,27 @@ function Kayit() {
                       <span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span>
                     </button>
                   </div>
+                  {/* Şifre Validasyon Mesajları */}
+                  {!searchParams.get('provider') && formData.password && (
+                    <div className="mt-2 space-y-1">
+                      <div className={`text-xs flex items-center gap-1 ${passwordErrors.minLength ? 'text-green-600 dark:text-green-400' : 'text-subtle-light dark:text-subtle-dark'}`}>
+                        <span className="material-symbols-outlined text-sm">{passwordErrors.minLength ? 'check_circle' : 'radio_button_unchecked'}</span>
+                        En az 8 karakter
+                      </div>
+                      <div className={`text-xs flex items-center gap-1 ${passwordErrors.hasUpperCase ? 'text-green-600 dark:text-green-400' : 'text-subtle-light dark:text-subtle-dark'}`}>
+                        <span className="material-symbols-outlined text-sm">{passwordErrors.hasUpperCase ? 'check_circle' : 'radio_button_unchecked'}</span>
+                        En az bir büyük harf
+                      </div>
+                      <div className={`text-xs flex items-center gap-1 ${passwordErrors.hasLowerCase ? 'text-green-600 dark:text-green-400' : 'text-subtle-light dark:text-subtle-dark'}`}>
+                        <span className="material-symbols-outlined text-sm">{passwordErrors.hasLowerCase ? 'check_circle' : 'radio_button_unchecked'}</span>
+                        En az bir küçük harf
+                      </div>
+                      <div className={`text-xs flex items-center gap-1 ${passwordErrors.hasNumber ? 'text-green-600 dark:text-green-400' : 'text-subtle-light dark:text-subtle-dark'}`}>
+                        <span className="material-symbols-outlined text-sm">{passwordErrors.hasNumber ? 'check_circle' : 'radio_button_unchecked'}</span>
+                        En az bir sayı
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Kullanıcı Türü */}
@@ -342,8 +678,8 @@ function Kayit() {
                     className="h-4 w-4 text-primary focus:ring-primary border-border-light dark:border-border-dark rounded"
                   />
                   <label htmlFor="terms" className="ml-2 block text-sm text-subtle-light dark:text-subtle-dark">
-                    <a href="#" className="text-primary hover:text-primary/80 transition-colors">Kullanım şartlarını</a> ve 
-                    <a href="#" className="text-primary hover:text-primary/80 transition-colors"> gizlilik politikasını</a> kabul ediyorum
+                    <button type="button" onClick={() => setShowTermsModal(true)} className="text-primary hover:text-primary/80 transition-colors">Kullanım şartlarını</button> ve{' '}
+                    <button type="button" onClick={() => setShowPrivacyModal(true)} className="text-primary hover:text-primary/80 transition-colors">gizlilik politikasını</button> kabul ediyorum
                   </label>
                 </div>
               </div>
@@ -352,7 +688,8 @@ function Kayit() {
                 <button 
                   type="button" 
                   onClick={handleNext}
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Devam Et
                 </button>
@@ -389,9 +726,9 @@ function Kayit() {
                       name="phone"
                       required 
                       value={formData.phone}
-                      onChange={handleInputChange}
+                      onChange={handleNumericInput}
                       className="w-full p-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-primary" 
-                      placeholder="+90 5XX XXX XX XX"
+                      placeholder="(5XX) XXX-XX-XX"
                     />
                   </div>
                   <div>
@@ -473,14 +810,16 @@ function Kayit() {
                 <button 
                   type="button" 
                   onClick={handlePrevious}
-                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Geri
                 </button>
                 <button 
                   type="button" 
                   onClick={handleNext}
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Devam Et
                 </button>
@@ -509,29 +848,17 @@ function Kayit() {
                 </div>
 
                 {/* İletişim Bilgileri */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">Telefon *</label>
-                    <input 
-                      type="tel" 
-                      name="phone"
-                      required 
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full p-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-primary" 
-                      placeholder="+90 5XX XXX XX XX"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">E-posta</label>
-                    <input 
-                      type="email" 
-                      value={formData.email}
-                      disabled
-                      className="w-full p-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark opacity-60" 
-                      placeholder={formData.email}
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">Telefon *</label>
+                  <input 
+                    type="tel" 
+                    name="phone"
+                    required 
+                    value={formData.phone}
+                    onChange={handleNumericInput}
+                    className="w-full p-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-primary" 
+                    placeholder="(5XX) XXX-XX-XX"
+                  />
                 </div>
 
                 {/* Vergi Numarası */}
@@ -542,7 +869,7 @@ function Kayit() {
                     name="taxNumber"
                     required 
                     value={formData.taxNumber}
-                    onChange={handleInputChange}
+                    onChange={handleNumericInput}
                     className="w-full p-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-primary" 
                     placeholder="Vergi numaranızı girin"
                   />
@@ -567,14 +894,16 @@ function Kayit() {
                 <button 
                   type="button" 
                   onClick={handlePrevious}
-                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Geri
                 </button>
                 <button 
                   type="button" 
                   onClick={handleNext}
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Devam Et
                 </button>
@@ -586,11 +915,6 @@ function Kayit() {
           {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-content-light dark:text-content-dark mb-6">Gerekli Belgeler</h2>
-              <p className="text-sm text-subtle-light dark:text-subtle-dark mb-4">
-                {formData.userType === 'farmer' 
-                  ? 'Bakanlığa başvuru sırasında teslim edilecek belgeleri yükleyin.' 
-                  : 'Sanayi Odasına başvuru sırasında teslim edilecek belgeleri yükleyin.'} Tüm belgeler PDF, JPG veya PNG formatında olmalıdır.
-              </p>
               
               <div className="space-y-6">
                 {/* Zorunlu Belgeler */}
@@ -677,15 +1001,15 @@ function Kayit() {
                   )}
                 </div>
 
-                {/* Opsiyonel Belgeler */}
-                <div className="border-t border-border-light dark:border-border-dark pt-4">
-                  <h3 className="text-lg font-semibold text-content-light dark:text-content-dark mb-4 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">add_circle</span>
-                    Opsiyonel Belgeler
-                  </h3>
+                {/* Opsiyonel Belgeler (Sadece çiftçi için) */}
+                {formData.userType === 'farmer' && (
+                  <div className="border-t border-border-light dark:border-border-dark pt-4">
+                    <h3 className="text-lg font-semibold text-content-light dark:text-content-dark mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">add_circle</span>
+                      Opsiyonel Belgeler
+                    </h3>
 
-                  {/* Muvafakatname (Sadece çiftçi için) */}
-                  {formData.userType === 'farmer' && (
+                    {/* Muvafakatname */}
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
                         Muvafakatname
@@ -708,10 +1032,8 @@ function Kayit() {
                         />
                       </label>
                     </div>
-                  )}
 
-                  {/* Taahhütname (Sadece çiftçi için) */}
-                  {formData.userType === 'farmer' && (
+                    {/* Taahhütname */}
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
                         Taahhütname
@@ -734,10 +1056,8 @@ function Kayit() {
                         />
                       </label>
                     </div>
-                  )}
 
-                  {/* Döner Sermaye Ücret Makbuzu (Sadece çiftçi için) */}
-                  {formData.userType === 'farmer' && (
+                    {/* Döner Sermaye Ücret Makbuzu */}
                     <div>
                       <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
                         Döner Sermaye Ücret Makbuzu
@@ -760,8 +1080,8 @@ function Kayit() {
                         />
                       </label>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* ŞİRKET İÇİN BELGELER */}
@@ -893,6 +1213,30 @@ function Kayit() {
                         />
                       </label>
                     </div>
+
+                    {/* Nüfus Cüzdanı Fotokopisi */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-content-light dark:text-content-dark mb-2">
+                        Nüfus Cüzdanı Fotokopisi *
+                      </label>
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-2">
+                        İşletme sahibinin TC kimlik belgesi fotokopisi
+                      </p>
+                      <label className="border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer block">
+                        <span className="material-symbols-outlined text-4xl text-subtle-light dark:text-subtle-dark mb-2">upload_file</span>
+                        <p className="text-sm text-subtle-light dark:text-subtle-dark">PDF/JPG/PNG formatında yükleyin</p>
+                        {formData.nufusCuzdani && (
+                          <p className="text-sm text-primary mt-2">{formData.nufusCuzdani.name}</p>
+                        )}
+                        <input 
+                          type="file" 
+                          name="nufusCuzdani"
+                          onChange={handleInputChange}
+                          className="hidden" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   {/* Opsiyonel Belgeler */}
@@ -981,14 +1325,16 @@ function Kayit() {
                 <button 
                   type="button" 
                   onClick={handlePrevious}
-                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Geri
                 </button>
                 <button 
                   type="button" 
                   onClick={handleNext}
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Devam Et
                 </button>
@@ -1177,20 +1523,37 @@ function Kayit() {
                 <button 
                   type="button" 
                   onClick={handlePrevious}
-                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 border border-border-light dark:border-border-dark rounded-lg text-content-light dark:text-content-dark hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Geri
                 </button>
                 <button 
                   type="submit"
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Kaydı Tamamla
+                  {loading && (
+                    <span className="material-symbols-outlined animate-spin">refresh</span>
+                  )}
+                  {loading ? 'Kaydediliyor...' : 'Kaydı Tamamla'}
                 </button>
               </div>
             </div>
           )}
         </form>
+
+        {/* Modals */}
+        <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
+        <PrivacyModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} />
+        
+        {/* Toast Notification */}
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={toast.isVisible}
+          onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+        />
       </div>
     </div>
   )

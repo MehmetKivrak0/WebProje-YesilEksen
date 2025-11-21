@@ -1,10 +1,13 @@
 // Server başlatma dosyası
+// ÖNEMLİ: dotenv en başta yüklenmeli
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { timeStamp } = require('console');
-require('dotenv').config();
+const { Pool } = require('pg');
+const multer = require('multer');
 
 const app = express();
 
@@ -36,23 +39,65 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-//Error Handling
-
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({
-        success: false,
-        message: 'Sunucu hatası',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-});
-
 //404 handler şuna yarar:
 // Endpoint bulunamadığında 404 hatası döndürmek için
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        message: 'Endpoint bulunamadı'
+        message: 'Endpoint bulunamadı',
+        path: req.path
+    });
+});
+
+//Error Handling - EN SONDA OLMALI (tüm route'lardan sonra)
+app.use((err, req, res, next) => {
+    // Multer hatalarını özel olarak handle et
+    if (err instanceof multer.MulterError) {
+        console.error('📎 Multer hatası:', {
+            code: err.code,
+            message: err.message,
+            field: err.field,
+            path: req.path,
+            method: req.method,
+            body: req.body,
+            hasFiles: !!req.files
+        });
+        
+        // Bazı Multer hataları kritik değil (örn: dosya yok)
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+            return res.status(400).json({
+                success: false,
+                message: 'Beklenmeyen dosya alanı',
+                error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+                code: err.code
+            });
+        }
+        
+        return res.status(400).json({
+            success: false,
+            message: 'Dosya yükleme hatası',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+            code: err.code
+        });
+    }
+
+    // Diğer hatalar
+    console.error('❌ Server hatası:', {
+        message: err.message,
+        stack: err.stack,
+        path: req.path,
+        method: req.method,
+        body: req.body
+    });
+
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Sunucu hatası',
+        error: process.env.NODE_ENV === 'development' ? {
+            message: err.message,
+            stack: err.stack,
+            path: req.path
+        } : undefined
     });
 });
 
@@ -78,7 +123,7 @@ const pool = new Pool({
   
 });
 
-pool.on('connet',()=>{
+pool.on('connect',()=>{
     console.log('🔗 PostgreSQL bağlantısı başarılı');
 });
 
