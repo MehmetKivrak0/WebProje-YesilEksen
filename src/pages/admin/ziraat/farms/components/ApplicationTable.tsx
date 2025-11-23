@@ -5,9 +5,10 @@ type ApplicationTableProps = {
   applications: FarmApplication[];
   onInspect: (application: FarmApplication) => void;
   onReject: (application: FarmApplication) => void;
+  onApprove: (application: FarmApplication) => void;
 };
 
-function ApplicationTable({ applications, onInspect, onReject }: ApplicationTableProps) {
+function ApplicationTable({ applications, onInspect, onReject, onApprove }: ApplicationTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full table-auto">
@@ -25,7 +26,7 @@ function ApplicationTable({ applications, onInspect, onReject }: ApplicationTabl
         </thead>
         <tbody className="divide-y divide-border-light text-sm dark:divide-border-dark">
           {applications.map((farm) => (
-            <tr key={farm.farm} className="transition-colors hover:bg-primary/5 dark:hover:bg-primary/10">
+            <tr key={farm.id} className="transition-colors hover:bg-primary/5 dark:hover:bg-primary/10">
               <td className="px-6 py-4 font-medium text-content-light dark:text-content-dark">{farm.farm}</td>
               <td className="px-6 py-4 text-subtle-light dark:text-subtle-dark">{farm.owner}</td>
               <td className="px-6 py-4 text-subtle-light dark:text-subtle-dark">{farm.location}</td>
@@ -43,7 +44,10 @@ function ApplicationTable({ applications, onInspect, onReject }: ApplicationTabl
                   >
                     İncele
                   </button>
-                  <button className="rounded-full bg-primary px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                  <button 
+                    className="rounded-full bg-primary px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    onClick={() => onApprove(farm)}
+                  >
                     Onayla
                   </button>
                   <button

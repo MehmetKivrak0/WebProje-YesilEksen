@@ -57,6 +57,15 @@ export interface AuthResponse {
     user: User;
 }
 
+export interface ResetPasswordData {
+    email: string;
+    newPassword: string;
+}
+
+export interface CheckEmailData {
+    email: string;
+}
+
 export const authService = {
     /**
      * Kullanıcı girişi
@@ -173,5 +182,22 @@ export const authService = {
             }
         }
         return null;
-    }
+    },
+
+    /**
+     * E-posta kontrolü (şifre sıfırlama için)
+     */
+    checkEmail: async (data: CheckEmailData): Promise<any> => {
+        const response = await api.post('/auth/check-email', data);
+        return response.data;
+    },
+
+    /**
+     * Şifre sıfırlama
+     */
+    resetPassword: async (data: ResetPasswordData): Promise<any> => {
+        const response = await api.post('/auth/reset-password', data);
+        return response.data;
+    },
+
 };

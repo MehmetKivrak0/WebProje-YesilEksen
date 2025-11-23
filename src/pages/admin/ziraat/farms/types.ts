@@ -12,10 +12,13 @@ export type FarmDocument = {
   name: string;
   status: DocumentStatus;
   url?: string;
+  belgeId?: string;
   farmerNote?: string;
+  adminNote?: string;
 };
 
 export type FarmApplication = {
+  id: string;
   farm: string;
   owner: string;
   location: string;
@@ -23,6 +26,7 @@ export type FarmApplication = {
   inspectionDate: string;
   lastUpdate: string;
   notes: string;
+  wasteTypes?: string[];
   contact: FarmContact;
   documents: FarmDocument[];
 };
@@ -45,5 +49,5 @@ export type ChangeLogEntry = {
   timestamp: string;
 };
 
-export type DocumentReviewState = Record<string, { status: DocumentStatus; reason?: string }>;
+export type DocumentReviewState = Record<string, { status: DocumentStatus; reason?: string; adminNote?: string }>;
 

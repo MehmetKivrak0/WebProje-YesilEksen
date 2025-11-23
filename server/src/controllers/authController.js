@@ -8,8 +8,26 @@ const path = require('path');
  */
 const normalizeFilePath = (file, userType, userId) => {
     if (!file) return null;
-    const relativePath = path.relative(path.join(__dirname, '../../uploads'), file.path);
-    return relativePath.replace(/\\/g, '/'); // Windows için backslash'i slash'e çevir
+    
+    // Multer diskStorage kullanıldığında file.path otomatik olarak set edilir
+    // Ancak güvenlik için kontrol edelim
+    if (!file.path) {
+        // Eğer path yoksa, destination ve filename'den oluştur
+        if (file.destination && file.filename) {
+            const fullPath = path.join(file.destination, file.filename);
+            const relativePath = path.relative(path.join(__dirname, '../../uploads'), fullPath);
+            return relativePath.replace(/\\/g, '/'); // Windows için backslash'i slash'e çevir
+        }
+        return null;
+    }
+    
+    try {
+        const relativePath = path.relative(path.join(__dirname, '../../uploads'), file.path);
+        return relativePath.replace(/\\/g, '/'); // Windows için backslash'i slash'e çevir
+    } catch (error) {
+        console.error('❌ normalizeFilePath hatası:', error.message);
+        return null;
+    }
 };
 
 /**
@@ -148,69 +166,95 @@ const register = async (req, res) => {
             });
         }
 
+        // Ziraat ve sanayi yöneticileri için durum 'aktif', diğerleri için 'beklemede'
+        const durum = (rol === 'ziraat_yoneticisi' || rol === 'sanayi_yoneticisi') ? 'aktif' : 'beklemede';
+
         await client.query('BEGIN');
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Transaction başlatıldı');
+        }
 
         // Kullanıcı oluştur
-        const userResult = await client.query(
-            `INSERT INTO kullanicilar 
-            (ad, soyad, eposta, sifre_hash, telefon, rol, durum, eposta_dogrulandi, sartlar_kabul, sartlar_kabul_tarihi)
-            VALUES ($1, $2, $3, $4, $5, $6, 'beklemede', FALSE, TRUE, CURRENT_TIMESTAMP)
-            RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
-            [firstName, lastName, email, hashedPassword, phone, rol]
-        );
+        let user;
+        try {
+            const userResult = await client.query(
+                `INSERT INTO kullanicilar 
+                (ad, soyad, eposta, sifre_hash, telefon, rol, durum, eposta_dogrulandi, sartlar_kabul, sartlar_kabul_tarihi)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, TRUE, CURRENT_TIMESTAMP)
+                RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
+                [firstName, lastName, email, hashedPassword, phone, rol, durum]
+            );
 
-        const user = userResult.rows[0];
+            user = userResult.rows[0];
+            
+            if (!user || !user.id) {
+                throw new Error('Kullanıcı oluşturulamadı - user.id bulunamadı');
+            }
+            
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Kullanıcı oluşturuldu:', {
+                    id: user.id,
+                    email: user.eposta,
+                    rol: user.rol,
+                    durum: user.durum,
+                    idType: typeof user.id
+                });
+            }
+        } catch (userError) {
+            console.error('❌ Kullanıcı oluşturma hatası:', {
+                message: userError.message,
+                code: userError.code,
+                detail: userError.detail,
+                stack: userError.stack
+            });
+            throw userError;
+        }
 
         // Rol'e göre ilgili tabloya kayıt ekle
-        let ciftlikId = null;
+        let ciftlikId = null; // Onaylandıktan sonra set edilecek
+        let basvuruId = null; // Başvuru ID'si (çiftlik için)
         let firmaId = null;
 
         if (rol === 'ciftci') {
-            // Çiftlik kaydı oluştur
+            // Çiftlik başvurusu oluştur (normalizasyon: başvuru ve kayıtlı çiftlik ayrı)
             const ciftlikName = farmName || `${firstName} ${lastName}'nin Çiftliği`;
             const ciftlikAdres = address || 'Belirtilmemiş';
+            const sahipAdi = `${firstName} ${lastName}`;
             
-            const ciftlikResult = await client.query(
-                `INSERT INTO ciftlikler (kullanici_id, ad, adres, durum)
-                VALUES ($1, $2, $3, 'beklemede')
+            // Önce ciftlik_basvurulari tablosuna başvuru ekle
+            // Not: ciftlik_id henüz yok, onaylandıktan sonra ciftlikler tablosuna geçecek
+            // Telefon: kullanicilar tablosundan çekilecek
+            const basvuruResult = await client.query(
+                `INSERT INTO ciftlik_basvurulari 
+                (kullanici_id, ciftlik_adi, sahip_adi, konum, durum)
+                VALUES ($1, $2, $3, $4, 'ilk_inceleme')
                 RETURNING id`,
-                [user.id, ciftlikName, ciftlikAdres]
+                [user.id, ciftlikName, sahipAdi, ciftlikAdres]
             );
-            ciftlikId = ciftlikResult.rows[0].id;
+            const basvuruId = basvuruResult.rows[0].id;
 
-            // Atık türlerini kaydet (varsa) - Mevcut ciftlik_atik_kapasiteleri tablosunu kullan
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Çiftlik başvurusu oluşturuldu:', {
+                    basvuru_id: basvuruId,
+                    ciftlik_adi: ciftlikName,
+                    durum: 'ilk_inceleme'
+                });
+            }
+
+            // Atık türlerini başvuru notlarına kaydet (varsa)
+            // Not: Atık kapasiteleri onaylandıktan sonra ciftlik_atik_kapasiteleri tablosuna eklenecek
+            // Başvuru aşamasında sadece notlar alanında saklıyoruz
             if (wasteTypes) {
                 const wasteTypesArray = Array.isArray(wasteTypes) ? wasteTypes : JSON.parse(wasteTypes);
+                const atikTurleriListesi = wasteTypesArray.join(', ');
                 
-                // Birim ID'sini bul (ton için - default)
-                const birimResult = await client.query(
-                    `SELECT id FROM birimler WHERE kod = 'ton' OR kod = 'kg' LIMIT 1`
+                await client.query(
+                    `UPDATE ciftlik_basvurulari 
+                    SET notlar = COALESCE(notlar || E'\\n', '') || $1
+                    WHERE id = $2`,
+                    [`Atık Türleri: ${atikTurleriListesi}`, basvuruId]
                 );
-                const birimId = birimResult.rows.length > 0 ? birimResult.rows[0].id : null;
-                
-                for (const wasteTypeKod of wasteTypesArray) {
-                    // Atık türü ID'sini bul (kod'a göre)
-                    const atikTuruResult = await client.query(
-                        `SELECT id FROM atik_turleri WHERE kod = $1 AND aktif = TRUE`,
-                        [wasteTypeKod]
-                    );
-                    
-                    if (atikTuruResult.rows.length > 0 && birimId) {
-                        const atikTuruId = atikTuruResult.rows[0].id;
-                        
-                        // Mevcut ciftlik_atik_kapasiteleri tablosuna kaydet
-                        // Kapasite = 0 (sonra güncellenecek), periyot = 'yillik'
-                        await client.query(
-                            `INSERT INTO ciftlik_atik_kapasiteleri 
-                            (ciftlik_id, atik_turu_id, kapasite, birim_id, periyot)
-                            VALUES ($1, $2, 0, $3, 'yillik')
-                            ON CONFLICT (ciftlik_id, atik_turu_id) DO NOTHING`,
-                            [ciftlikId, atikTuruId, birimId]
-                        );
-                    } else {
-                        console.warn(`Atık türü veya birim bulunamadı: ${wasteTypeKod}`);
-                    }
-                }
             }
 
             // Çiftçi belgelerini kaydet (belgeler tablosu kullanılıyor)
@@ -250,15 +294,20 @@ const register = async (req, res) => {
                     }
                     
                     // Dosya bilgilerini al
+                    if (!filePath) {
+                        console.warn(`⚠️ Dosya yolu oluşturulamadı: ${fileKey}`);
+                        continue; // Bu dosyayı atla ve bir sonrakine geç
+                    }
+                    
                     const fileExt = filePath.split('.').pop()?.toLowerCase() || 'pdf';
                     const fileSize = file.size || 0;
                     
-                    // Belgeyi kaydet
+                    // Belgeyi kaydet - basvuru_id ve basvuru_tipi ile bağla
                     await client.query(
                         `INSERT INTO belgeler 
-                        (kullanici_id, ciftlik_id, belge_turu_id, ad, dosya_yolu, dosya_boyutu, dosya_tipi, durum, zorunlu)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, 'beklemede', $8)`,
-                        [user.id, ciftlikId, belgeTuruId, file.originalname, filePath, fileSize, fileExt, true]
+                        (kullanici_id, basvuru_id, basvuru_tipi, belge_turu_id, ad, dosya_yolu, dosya_boyutu, dosya_tipi, durum, zorunlu)
+                        VALUES ($1, $2, 'ciftlik_basvurusu', $3, $4, $5, $6, $7, 'beklemede', $8)`,
+                        [user.id, basvuruId, belgeTuruId, file.originalname, filePath, fileSize, fileExt, true]
                     );
                 }
             }
@@ -316,6 +365,11 @@ const register = async (req, res) => {
                     }
                     
                     // Dosya bilgilerini al
+                    if (!filePath) {
+                        console.warn(`⚠️ Dosya yolu oluşturulamadı: ${fileKey}`);
+                        continue; // Bu dosyayı atla ve bir sonrakine geç
+                    }
+                    
                     const fileExt = filePath.split('.').pop()?.toLowerCase() || 'pdf';
                     const fileSize = file.size || 0;
                     
@@ -329,19 +383,66 @@ const register = async (req, res) => {
                 }
             }
 
-        } else if (rol === 'ziraat_yoneticisi') {
-            // Ziraat yöneticisi için ayrı tablo yok, sadece kullanici kaydı yeterli
-            console.log('Ziraat yöneticisi kaydedildi:', user.id);
-        } else if (rol === 'sanayi_yoneticisi') {
-            // Sanayi yöneticisi için ayrı tablo yok, sadece kullanici kaydı yeterli
-            console.log('Sanayi yöneticisi kaydedildi:', user.id);
+        } else if (rol === 'ziraat_yoneticisi' || rol === 'sanayi_yoneticisi') {
+            // Oda yöneticileri için sadece kullanicilar tablosunda rol yeterli
+            // oda_tipi bilgisi rol'den türetilebilir (ziraat_yoneticisi -> ziraat, sanayi_yoneticisi -> sanayi)
+            // Normalizasyon: Gereksiz oda_kullanicilari tablosu kaldırıldı
+            
+            if (process.env.NODE_ENV === 'development') {
+                const odaTipi = rol === 'ziraat_yoneticisi' ? 'ziraat' : 'sanayi';
+                console.log(`✅ ${rol} kaydedildi - kullanicilar tablosuna eklendi:`, {
+                    kullanici_id: user.id,
+                    email: user.eposta,
+                    rol: user.rol,
+                    oda_tipi: odaTipi + ' (rol\'den türetildi)'
+                });
+            }
         }
 
+        // Transaction'ı commit et
         await client.query('COMMIT');
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Transaction commit edildi - Kullanıcı veritabanına kaydedildi:', {
+                id: user.id,
+                email: user.eposta,
+                rol: user.rol
+            });
+            
+            // Commit sonrası veritabanında kaydın varlığını doğrula
+            const verifyResult = await pool.query(
+                'SELECT id, ad, soyad, eposta, rol, durum FROM kullanicilar WHERE id = $1',
+                [user.id]
+            );
+            
+            if (verifyResult.rows.length > 0) {
+                console.log('✅ Doğrulama: Kullanıcı veritabanında bulundu:', verifyResult.rows[0]);
+            } else {
+                console.error('❌ Doğrulama: Kullanıcı veritabanında BULUNAMADI!', {
+                    id: user.id,
+                    email: user.eposta
+                });
+            }
+        }
 
-        res.status(201).json({
+        // Ziraat ve sanayi yöneticileri için token oluştur ve otomatik giriş yap
+        let token = null;
+        if (rol === 'ziraat_yoneticisi' || rol === 'sanayi_yoneticisi') {
+            token = generateToken({
+                id: user.id,
+                email: user.eposta,
+                rol: user.rol
+            });
+        }
+
+        // Mesajı duruma göre belirle
+        const successMessage = (rol === 'ziraat_yoneticisi' || rol === 'sanayi_yoneticisi') 
+            ? 'Kayıt başarılı! Otomatik giriş yapılıyor...' 
+            : 'Kayıt başarılı! Admin onayı bekleniyor.';
+
+        const responseData = {
             success: true,
-            message: 'Kayıt başarılı! Admin onayı bekleniyor.',
+            message: successMessage,
             user: {
                 id: user.id,
                 ad: user.ad,
@@ -350,16 +451,37 @@ const register = async (req, res) => {
                 rol: user.rol,
                 durum: user.durum
             }
-        });
+        };
+
+        // Token varsa ekle
+        if (token) {
+            responseData.token = token;
+        }
+
+        res.status(201).json(responseData);
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Response gönderildi - Kayıt başarılı');
+        }
 
     } catch (error) {
-        await client.query('ROLLBACK');
+        // Transaction'ı rollback et
+        try {
+            await client.query('ROLLBACK');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🔄 Transaction rollback edildi');
+            }
+        } catch (rollbackError) {
+            console.error('❌ Rollback hatası:', rollbackError.message);
+        }
+        
         console.error('❌ Register hatası:', {
             message: error.message,
             stack: error.stack,
             code: error.code,
             detail: error.detail,
-            body: req.body
+            body: req.body,
+            email: req.body?.email || 'tanımsız'
         });
         
         // Veritabanı hatalarını özel olarak handle et
@@ -495,7 +617,25 @@ const login = async (req, res) => {
         }
 
         // Kullanıcı durumu kontrolü
-        if (user.durum === 'beklemede') {
+        // Ziraat ve sanayi yöneticileri için durum kontrolünü atla (direkt giriş yapabilirler)
+        // Normalizasyon: Sadece kullanicilar.rol kullanılıyor, oda_kullanicilari tablosu kaldırıldı
+        const isOdaYoneticisi = user.rol === 'ziraat_yoneticisi' || 
+                                user.rol === 'sanayi_yoneticisi' || 
+                                user.rol === 'super_yonetici';
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔍 Kullanıcı durum kontrolü:', {
+                email: user.eposta,
+                rol: user.rol,
+                durum: user.durum,
+                isOdaYoneticisi: isOdaYoneticisi
+            });
+        }
+        
+        if (!isOdaYoneticisi && user.durum === 'beklemede') {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('❌ Kullanıcı beklemede durumunda ve oda yöneticisi değil');
+            }
             return res.status(403).json({
                 success: false,
                 message: 'Hesabınız admin onayı bekliyor'
@@ -614,9 +754,165 @@ const logout = async (req, res) => {
     }
 };
 
+/**
+ * E-posta kontrolü (şifre sıfırlama için)
+ * POST /api/auth/check-email
+ */
+const checkEmail = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validasyon
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'E-posta adresi gereklidir'
+            });
+        }
+
+        // E-posta format kontrolü
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Geçerli bir e-posta adresi giriniz'
+            });
+        }
+
+        // Kullanıcıyı bul
+        const result = await pool.query(
+            'SELECT id, eposta FROM kullanicilar WHERE eposta = $1',
+            [email]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'E-posta adresi doğrulandı'
+        });
+
+    } catch (error) {
+        console.error('❌ Check Email hatası:', {
+            message: error.message,
+            stack: error.stack,
+            email: req.body?.email || 'tanımsız'
+        });
+        res.status(500).json({
+            success: false,
+            message: 'E-posta kontrolü sırasında bir hata oluştu',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+/**
+ * Şifre sıfırlama
+ * POST /api/auth/reset-password
+ */
+const resetPassword = async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+
+        // Validasyon
+        if (!email || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'E-posta ve yeni şifre gereklidir'
+            });
+        }
+
+        // Şifre validasyonu
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Şifre en az 8 karakter olmalıdır'
+            });
+        }
+
+        // Büyük harf kontrolü
+        if (!/[A-Z]/.test(newPassword)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Şifre en az bir büyük harf içermelidir'
+            });
+        }
+
+        // Küçük harf kontrolü
+        if (!/[a-z]/.test(newPassword)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Şifre en az bir küçük harf içermelidir'
+            });
+        }
+
+        // Sayı kontrolü
+        if (!/[0-9]/.test(newPassword)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Şifre en az bir sayı içermelidir'
+            });
+        }
+
+        // Kullanıcıyı bul
+        const result = await pool.query(
+            'SELECT id, eposta FROM kullanicilar WHERE eposta = $1',
+            [email]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı'
+            });
+        }
+
+        // Yeni şifreyi hashle
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        // Şifreyi güncelle
+        await pool.query(
+            'UPDATE kullanicilar SET sifre_hash = $1 WHERE eposta = $2',
+            [hashedPassword, email]
+        );
+
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Şifre sıfırlandı:', {
+                email: email,
+                hashPrefix: hashedPassword.substring(0, 10) + '...'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Şifreniz başarıyla güncellendi'
+        });
+
+    } catch (error) {
+        console.error('❌ Reset Password hatası:', {
+            message: error.message,
+            stack: error.stack,
+            email: req.body?.email || 'tanımsız'
+        });
+        res.status(500).json({
+            success: false,
+            message: 'Şifre sıfırlama sırasında bir hata oluştu',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
     getMe,
-    logout
+    logout,
+    checkEmail,
+    resetPassword
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ZrtnNavbar from '../../../../components/zrtnavbar';
 import SummaryCards from './components/SummaryCards';
@@ -7,13 +7,18 @@ import RegisteredFarmersTable from './components/RegisteredFarmersTable';
 import ProductsTable from './components/ProductsTable';
 import ApplicationDetailModal from './components/ApplicationDetailModal';
 import { useDashboardFilters } from './hooks/useDashboardFilters';
-import { productSummary } from './data/productSummary';
-import { farmSummary } from './data/farmSummary';
-import { activityLog } from './data/activityLog';
-import { registeredFarmers } from './data/registeredFarmers';
-import { dashboardProducts } from './data/dashboardProducts';
+import { ziraatService } from '../../../../services/ziraatService';
+import type { DashboardStats, ProductApplication, FarmApplication } from '../../../../services/ziraatService';
 
 function DashboardPage() {
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [productApplications, setProductApplications] = useState<ProductApplication[]>([]);
+  const [farmApplications, setFarmApplications] = useState<FarmApplication[]>([]);
+  const [registeredFarmersData, setRegisteredFarmersData] = useState<any[]>([]);
+  const [dashboardProductsData, setDashboardProductsData] = useState<any[]>([]);
+  const [activityLogData, setActivityLogData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [selectedFarm, setSelectedFarm] = useState<any>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -35,151 +40,129 @@ function DashboardPage() {
     goToNextFarmerPage,
     setFarmerPage,
   } = useDashboardFilters({
-    farmers: registeredFarmers,
-    products: dashboardProducts,
+    farmers: registeredFarmersData,
+    products: dashboardProductsData,
   });
 
+  // API'den veri yükleme
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Paralel olarak tüm verileri yükle
+      const [statsRes, productsRes, farmsRes, farmersRes, dashboardProductsRes, activityRes] = await Promise.all([
+        ziraatService.getDashboardStats(),
+        ziraatService.getProductApplications({ limit: 3 }),
+        ziraatService.getFarmApplications({ limit: 3 }),
+        ziraatService.getRegisteredFarmers().catch(() => ({ success: true, farmers: [], pagination: {} })),
+        ziraatService.getDashboardProducts().catch(() => ({ success: true, products: [] })),
+        ziraatService.getActivityLog().catch(() => ({ success: true, activities: [], pagination: {} }))
+      ]);
+
+      setDashboardStats(statsRes.stats);
+      setProductApplications(productsRes.applications || []);
+      setFarmApplications(farmsRes.applications || []);
+      
+      // API'den gelen çiftçileri frontend formatına map et
+      if (farmersRes.success && farmersRes.farmers && farmersRes.farmers.length > 0) {
+        const mappedFarmers = farmersRes.farmers.map((farmer: any) => ({
+          id: farmer.id,
+          name: farmer.name || 'İsimsiz',
+          farm: farmer.farmName || farmer.farm || 'Çiftlik adı yok',
+          registrationDate: farmer.registrationDate 
+            ? new Date(farmer.registrationDate).toLocaleDateString('tr-TR')
+            : 'Tarih yok',
+          status: farmer.status === 'aktif' ? 'Aktif' : 'Beklemede',
+          detailPath: `/admin/ziraat/ciftci/${farmer.id}`
+        }));
+        setRegisteredFarmersData(mappedFarmers);
+      } else {
+        setRegisteredFarmersData([]);
+      }
+      
+      // API'den gelen ürünleri frontend formatına map et
+      if (dashboardProductsRes.success && dashboardProductsRes.products && dashboardProductsRes.products.length > 0) {
+        const mappedProducts = dashboardProductsRes.products.map((product: any) => ({
+          id: product.id,
+          name: product.name || 'Ürün adı yok',
+          producer: product.farmer || 'Üretici yok',
+          status: product.status === 'stokta' ? 'Stokta' : 
+                 product.status === 'aktif' ? 'Stokta' : 
+                 product.status === 'incelemede' ? 'İncelemede' : 'Tükendi',
+          lastUpdate: new Date().toLocaleDateString('tr-TR') // API'de lastUpdate yok, şimdilik bugünün tarihi
+        }));
+        setDashboardProductsData(mappedProducts);
+      } else {
+        setDashboardProductsData([]);
+      }
+
+      // API'den gelen aktiviteleri frontend formatına map et
+      if (activityRes.success && activityRes.activities && activityRes.activities.length > 0) {
+        const mappedActivities = activityRes.activities.map((activity: any) => ({
+          id: activity.id,
+          title: activity.description || activity.baslik || 'Aktivite',
+          description: activity.details?.aciklama || activity.user || 'Detay yok',
+          timestamp: activity.timestamp 
+            ? new Date(activity.timestamp).toLocaleString('tr-TR', { 
+                day: 'numeric', 
+                month: 'long', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })
+            : 'Tarih yok',
+          type: activity.type || 'kayit'
+        }));
+        setActivityLogData(mappedActivities);
+      } else {
+        setActivityLogData([]);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Veriler yüklenemedi');
+      console.error('Dashboard veri yükleme hatası:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // API'den gelen aktiviteleri kullan
   const filteredActivities =
     activityFilter === 'hepsi'
-      ? activityLog
-      : activityLog.filter((activity) => activity.type === activityFilter);
+      ? activityLogData
+      : activityLogData.filter((activity) => activity.type === activityFilter);
+
+  const getStatusClass = (status: string) => {
+    if (status === 'beklemede' || status === 'incelemede' || status === 'İncelemede' || status === 'ilk_inceleme' || status === 'denetimde' || status === 'Denetimde') {
+      return 'inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    }
+    if (status === 'onaylandi' || status === 'Onaylandı') {
+      return 'inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200';
+    }
+    return 'inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-200';
+  };
+
+  const formatStatus = (status: string) => {
+    if (status === 'beklemede' || status === 'incelemede') return 'İncelemede';
+    if (status === 'onaylandi') return 'Onaylandı';
+    if (status === 'revizyon') return 'Revizyon';
+    if (status === 'ilk_inceleme' || status === 'denetimde') return 'Denetimde';
+    if (status === 'reddedildi') return 'Reddedildi';
+    return status;
+  };
 
   const productApprovalStats = [
-    { label: 'Bekleyen', value: productSummary.pending },
-    { label: 'Onaylanan', value: productSummary.approved },
-    { label: 'Reddedilen', value: productSummary.revision },
-  ];
-
-  const productApprovalRows = [
-    {
-      name: 'Organik Kompost',
-      applicant: 'Anadolu Tarım Kooperatifi',
-      status: 'İncelemede',
-      statusClass:
-        'inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      lastUpdate: '2 saat önce',
-      applicationNumber: 'P-1024',
-      sector: 'Yenilenebilir Enerji',
-      establishmentYear: 2015,
-      employeeCount: '50-100',
-      email: 'info@ekoenerji.com',
-      applicationDate: '2024-02-12',
-      taxNumber: '1234567890',
-      description: 'Laboratuvar sonuçları bekleniyor.',
-      documents: [
-        { name: 'Vergi Levhası' },
-        { name: 'İmza Sirküleri' },
-      ],
-    },
-    {
-      name: 'Sıvı Gübre',
-      applicant: 'Çukurova Ziraat',
-      status: 'Onaylandı',
-      statusClass:
-        'inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200',
-      lastUpdate: 'Dün',
-      applicationNumber: 'P-1025',
-      sector: 'Tarım',
-      establishmentYear: 2018,
-      employeeCount: '25-50',
-      email: 'info@cukurovaziraat.com',
-      applicationDate: '2024-02-10',
-      taxNumber: '9876543210',
-      description: 'Başvuru onaylandı.',
-      documents: [
-        { name: 'Vergi Levhası' },
-        { name: 'İmza Sirküleri' },
-        { name: 'Ürün Analiz Raporu' },
-      ],
-    },
-    {
-      name: 'Hayvansal Yem',
-      applicant: 'Bereket Gıda',
-      status: 'Revizyon',
-      statusClass:
-        'inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-200',
-      lastUpdate: '3 gün önce',
-      applicationNumber: 'P-1026',
-      sector: 'Hayvancılık',
-      establishmentYear: 2020,
-      employeeCount: '10-25',
-      email: 'info@bereketgida.com',
-      applicationDate: '2024-02-08',
-      taxNumber: '5555555555',
-      description: 'Eksik belgeler tamamlanmalı.',
-      documents: [
-        { name: 'Vergi Levhası' },
-      ],
-    },
+    { label: 'Bekleyen', value: dashboardStats?.productSummary?.pending ?? 0 },
+    { label: 'Onaylanan', value: dashboardStats?.productSummary?.approved ?? 0 },
+    { label: 'Reddedilen', value: dashboardStats?.productSummary?.revision ?? 0 },
   ];
 
   const farmApprovalStats = [
-    { label: 'Yeni Başvuru', value: farmSummary.newApplications },
-    { label: 'Denetimde', value: farmSummary.inspections },
-    { label: 'Onaylanan', value: farmSummary.approved },
-  ];
-
-  const farmApprovalRows = [
-    {
-      name: 'Lale Bahçesi',
-      owner: 'Hilal Karaca',
-      status: 'Denetimde',
-      statusClass:
-        'inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      inspectionDate: '12 Şubat 2024',
-      applicationNumber: 'C-2001',
-      sector: 'Organik Tarım',
-      establishmentYear: 2019,
-      employeeCount: '5-10',
-      email: 'info@lalebahcesi.com',
-      applicationDate: '2024-02-01',
-      taxNumber: '1111111111',
-      description: 'Denetim süreci devam ediyor.',
-      documents: [
-        { name: 'Vergi Levhası' },
-        { name: 'Çiftlik Ruhsatı' },
-      ],
-    },
-    {
-      name: 'Göksu Organik',
-      owner: 'Yağız Yıldırım',
-      status: 'Onaylandı',
-      statusClass:
-        'inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200',
-      inspectionDate: '8 Şubat 2024',
-      applicationNumber: 'C-2002',
-      sector: 'Organik Tarım',
-      establishmentYear: 2017,
-      employeeCount: '15-25',
-      email: 'info@goksuorganik.com',
-      applicationDate: '2024-01-28',
-      taxNumber: '2222222222',
-      description: 'Çiftlik onaylandı.',
-      documents: [
-        { name: 'Vergi Levhası' },
-        { name: 'Çiftlik Ruhsatı' },
-        { name: 'Organik Sertifika' },
-      ],
-    },
-    {
-      name: 'Pamukova Tarım',
-      owner: 'Selim Demirtaş',
-      status: 'Evrak Bekliyor',
-      statusClass:
-        'inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-200',
-      inspectionDate: 'Bekleniyor',
-      applicationNumber: 'C-2003',
-      sector: 'Tarım',
-      establishmentYear: 2021,
-      employeeCount: '3-5',
-      email: 'info@pamukovatarim.com',
-      applicationDate: '2024-02-05',
-      taxNumber: '3333333333',
-      description: 'Eksik evraklar tamamlanmalı.',
-      documents: [
-        { name: 'Vergi Levhası' },
-      ],
-    },
+    { label: 'Yeni Başvuru', value: dashboardStats?.farmSummary?.newApplications ?? 0 },
+    { label: 'Denetimde', value: dashboardStats?.farmSummary?.inspections ?? 0 },
+    { label: 'Onaylanan', value: dashboardStats?.farmSummary?.approved ?? 0 },
   ];
 
   const handleProductRowClick = (row: any) => {
@@ -192,18 +175,48 @@ function DashboardPage() {
     setIsFarmModalOpen(true);
   };
 
-  const handleApprove = () => {
-    // Onaylama işlemi burada yapılacak
-    console.log('Onaylandı:', selectedProduct || selectedFarm);
-    setIsProductModalOpen(false);
-    setIsFarmModalOpen(false);
+  const handleApprove = async () => {
+    try {
+      if (selectedProduct) {
+        await ziraatService.approveProduct(selectedProduct.id);
+        alert('Ürün başvurusu onaylandı');
+      } else if (selectedFarm) {
+        await ziraatService.approveFarm(selectedFarm.id);
+        alert('Çiftlik başvurusu onaylandı');
+      }
+      
+      // Verileri yeniden yükle
+      await loadDashboardData();
+      
+      setIsProductModalOpen(false);
+      setIsFarmModalOpen(false);
+      setSelectedProduct(null);
+      setSelectedFarm(null);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Onaylama başarısız');
+    }
   };
 
-  const handleReject = () => {
-    // Reddetme işlemi burada yapılacak
-    console.log('Reddedildi:', selectedProduct || selectedFarm);
-    setIsProductModalOpen(false);
-    setIsFarmModalOpen(false);
+  const handleReject = async (reason: string) => {
+    try {
+      if (selectedProduct) {
+        await ziraatService.rejectProduct(selectedProduct.id, { reason });
+        alert('Ürün başvurusu reddedildi');
+      } else if (selectedFarm) {
+        await ziraatService.rejectFarm(selectedFarm.id, { reason });
+        alert('Çiftlik başvurusu reddedildi');
+      }
+      
+      // Verileri yeniden yükle
+      await loadDashboardData();
+      
+      setIsProductModalOpen(false);
+      setIsFarmModalOpen(false);
+      setSelectedProduct(null);
+      setSelectedFarm(null);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Reddetme başarısız');
+    }
   };
 
   return (
@@ -223,7 +236,32 @@ function DashboardPage() {
             </div>
           </header>
 
-          <SummaryCards productSummary={productSummary} farmSummary={farmSummary} />
+          {loading ? (
+            <div className="flex min-h-screen items-center justify-center">
+              <div className="text-center">
+                <div className="mb-4 text-2xl">Yükleniyor...</div>
+                <div className="text-subtle-light dark:text-subtle-dark">Dashboard verileri yükleniyor</div>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex min-h-screen items-center justify-center">
+              <div className="text-center">
+                <div className="mb-4 text-2xl text-red-600">Hata</div>
+                <div className="text-subtle-light dark:text-subtle-dark">{error}</div>
+                <button 
+                  onClick={loadDashboardData}
+                  className="mt-4 rounded bg-primary px-4 py-2 text-white"
+                >
+                  Tekrar Dene
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <SummaryCards 
+                productSummary={dashboardStats?.productSummary || { pending: 0, approved: 0, revision: 0 }} 
+                farmSummary={dashboardStats?.farmSummary || { newApplications: 0, inspections: 0, approved: 0 }} 
+              />
 
           <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div id="product-approvals" className="rounded-xl border border-border-light bg-background-light p-6 dark:border-border-dark dark:bg-background-dark">
@@ -263,18 +301,22 @@ function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light text-sm dark:divide-border-dark">
-                    {productApprovalRows.map((row) => (
+                    {productApplications.map((row) => (
                       <tr
-                        key={row.name}
-                        onClick={() => handleProductRowClick(row)}
+                        key={row.id}
+                        onClick={() => handleProductRowClick({
+                          ...row,
+                          status: formatStatus(row.status),
+                          lastUpdate: new Date(row.lastUpdate).toLocaleDateString('tr-TR'),
+                        })}
                         className="cursor-pointer transition-colors hover:bg-primary/5 dark:hover:bg-primary/10"
                       >
                         <td className="px-4 py-3 font-medium text-content-light dark:text-content-dark">{row.name}</td>
                         <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.applicant}</td>
                         <td className="px-4 py-3">
-                          <span className={row.statusClass}>{row.status}</span>
+                          <span className={getStatusClass(row.status)}>{formatStatus(row.status)}</span>
                         </td>
-                        <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.lastUpdate}</td>
+                        <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{new Date(row.lastUpdate).toLocaleDateString('tr-TR')}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -319,18 +361,22 @@ function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light text-sm dark:divide-border-dark">
-                    {farmApprovalRows.map((row) => (
+                    {farmApplications.map((row) => (
                       <tr
-                        key={row.name}
-                        onClick={() => handleFarmRowClick(row)}
+                        key={row.id}
+                        onClick={() => handleFarmRowClick({
+                          ...row,
+                          status: formatStatus(row.status),
+                          inspectionDate: row.inspectionDate ? new Date(row.inspectionDate).toLocaleDateString('tr-TR') : 'Bekleniyor',
+                        })}
                         className="cursor-pointer transition-colors hover:bg-primary/5 dark:hover:bg-primary/10"
                       >
                         <td className="px-4 py-3 font-medium text-content-light dark:text-content-dark">{row.name}</td>
                         <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.owner}</td>
                         <td className="px-4 py-3">
-                          <span className={row.statusClass}>{row.status}</span>
+                          <span className={getStatusClass(row.status)}>{formatStatus(row.status)}</span>
                         </td>
-                        <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.inspectionDate}</td>
+                        <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.inspectionDate ? new Date(row.inspectionDate).toLocaleDateString('tr-TR') : 'Bekleniyor'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -421,6 +467,8 @@ function DashboardPage() {
               </Link>
             </div>
           </section>
+            </>
+          )}
         </div>
       </main>
 

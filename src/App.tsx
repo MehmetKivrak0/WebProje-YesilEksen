@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Anasayfa from './pages/Anasayfa.tsx'
 import Giris from './pages/auth/giris.tsx'
 import Kayit from './pages/auth/kayit.tsx'
+import SifremiUnuttum from './pages/auth/sifremi-unuttum.tsx'
 import WasteManagementPage from './pages/admin/ziraat/waste/WasteManagementPage.tsx'
 import DashboardPage from './pages/admin/ziraat/dashboard/DashboardPage.tsx'
 import ProductApplicationsPage from './pages/admin/ziraat/products/ProductApplicationsPage.tsx'
@@ -32,6 +33,8 @@ import Atiklar from './pages/atiklar.tsx'
 import AtikEkle from './pages/ciftlik/atik_ekle.tsx'
 import UrunDurum from './pages/ciftlik/urun_durum.tsx'
 import FirmaBasvuruDurum from './pages/firma/firma_basvuru_durum.tsx'
+import IamGroot from './pages/auth/iamgroot.tsx'
+import PrivacyPolicy from './pages/PrivacyPolicy.tsx'
 
 function App() {
   return (
@@ -40,6 +43,9 @@ function App() {
         <Route path="/" element={<Anasayfa />} />
         <Route path="/giris" element={<Giris />} />
         <Route path="/kayit" element={<Kayit />} />
+        <Route path="/sifremi-unuttum" element={<SifremiUnuttum />} />
+        <Route path="/iamgroot" element={<IamGroot />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/admin/atik" element={<WasteManagementPage />} />
         <Route path="/admin/ziraat" element={<DashboardPage />} />
         <Route path="/admin/ziraat/urun-onay" element={<ProductApplicationsPage />} />

@@ -1,8 +1,8 @@
 -- =====================================================
 -- YEŞİL-EKSEN TARIMSAL ATIK YÖNETİM SİSTEMİ
--- OPTİMİZE EDİLMİŞ %100 NORMALİZE ŞEMA
--- Frontend İhtiyaçlarına Göre Optimize Edildi
--- PostgreSQL 14+ - 3NF/BCNF - 51 TABLO
+-- BİRLEŞTİRİLMİŞ VERİTABANI KURULUM DOSYASI
+-- Tüm tablolar, seed data ve oda kullanıcıları dahil
+-- PostgreSQL 14+ - 3NF/BCNF - 52 TABLO
 -- =====================================================
 
 -- Extension'ları aktifleştir
@@ -114,6 +114,21 @@ CREATE TABLE kullanici_sosyal (
     profil_url TEXT,
     olusturma TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(saglayici, saglayici_id)
+);
+
+-- Oda Kullanıcıları Tablosu
+-- /iamgroot sayfasından kayıt olan ziraat ve sanayi odası yöneticileri için
+-- Oda Kullanıcıları Tablosu (Normalize edilmiş yapı)
+-- Foreign key ile kullanicilar tablosuna bağlı
+-- Sadece oda yöneticilerine özel bilgileri tutar (oda_tipi)
+-- Diğer bilgiler (ad, soyad, email, şifre) kullanicilar tablosunda
+CREATE TABLE oda_kullanicilari (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    kullanici_id UUID NOT NULL UNIQUE REFERENCES kullanicilar(id) ON DELETE CASCADE,
+    oda_tipi VARCHAR(20) NOT NULL CHECK (oda_tipi IN ('ziraat', 'sanayi')),
+    sartlar_kabul BOOLEAN DEFAULT FALSE,
+    olusturma TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    guncelleme TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- =====================================================
@@ -898,28 +913,30 @@ CREATE TABLE lisanslar (
 -- İNDEXLER (Performans)
 -- =====================================================
 
-CREATE INDEX idx_kullanicilar_eposta ON kullanicilar(eposta);
-CREATE INDEX idx_kullanicilar_rol ON kullanicilar(rol);
-CREATE INDEX idx_kullanicilar_durum ON kullanicilar(durum);
-CREATE INDEX idx_ciftlikler_kullanici ON ciftlikler(kullanici_id);
-CREATE INDEX idx_ciftlikler_durum ON ciftlikler(durum);
-CREATE INDEX idx_ciftlikler_sehir ON ciftlikler(sehir_id);
-CREATE INDEX idx_firmalar_kullanici ON firmalar(kullanici_id);
-CREATE INDEX idx_firmalar_durum ON firmalar(durum);
-CREATE INDEX idx_firmalar_sektor ON firmalar(sektor_id);
-CREATE INDEX idx_urunler_ciftlik ON urunler(ciftlik_id);
-CREATE INDEX idx_urunler_kategori ON urun_kategorileri(id);
-CREATE INDEX idx_urunler_durum ON urunler(durum);
-CREATE INDEX idx_teklifler_urun ON teklifler(urun_id);
-CREATE INDEX idx_teklifler_firma ON teklifler(firma_id);
-CREATE INDEX idx_siparisler_no ON siparisler(siparis_no);
-CREATE INDEX idx_siparisler_durum ON siparisler(durum);
-CREATE INDEX idx_denetimler_ciftlik ON denetimler(ciftlik_id);
-CREATE INDEX idx_denetimler_firma ON denetimler(firma_id);
-CREATE INDEX idx_denetimler_denetci ON denetimler(denetci_id);
-CREATE INDEX idx_denetimler_tarih ON denetimler(denetim_tarihi);
-CREATE INDEX idx_bildirimler_kullanici ON bildirimler(kullanici_id);
-CREATE INDEX idx_bildirimler_okundu ON bildirimler(okundu);
+CREATE INDEX IF NOT EXISTS idx_kullanicilar_eposta ON kullanicilar(eposta);
+CREATE INDEX IF NOT EXISTS idx_kullanicilar_rol ON kullanicilar(rol);
+CREATE INDEX IF NOT EXISTS idx_kullanicilar_durum ON kullanicilar(durum);
+CREATE INDEX IF NOT EXISTS idx_ciftlikler_kullanici ON ciftlikler(kullanici_id);
+CREATE INDEX IF NOT EXISTS idx_ciftlikler_durum ON ciftlikler(durum);
+CREATE INDEX IF NOT EXISTS idx_ciftlikler_sehir ON ciftlikler(sehir_id);
+CREATE INDEX IF NOT EXISTS idx_firmalar_kullanici ON firmalar(kullanici_id);
+CREATE INDEX IF NOT EXISTS idx_firmalar_durum ON firmalar(durum);
+CREATE INDEX IF NOT EXISTS idx_firmalar_sektor ON firmalar(sektor_id);
+CREATE INDEX IF NOT EXISTS idx_urunler_ciftlik ON urunler(ciftlik_id);
+CREATE INDEX IF NOT EXISTS idx_urunler_kategori ON urun_kategorileri(id);
+CREATE INDEX IF NOT EXISTS idx_urunler_durum ON urunler(durum);
+CREATE INDEX IF NOT EXISTS idx_teklifler_urun ON teklifler(urun_id);
+CREATE INDEX IF NOT EXISTS idx_teklifler_firma ON teklifler(firma_id);
+CREATE INDEX IF NOT EXISTS idx_siparisler_no ON siparisler(siparis_no);
+CREATE INDEX IF NOT EXISTS idx_siparisler_durum ON siparisler(durum);
+CREATE INDEX IF NOT EXISTS idx_denetimler_ciftlik ON denetimler(ciftlik_id);
+CREATE INDEX IF NOT EXISTS idx_denetimler_firma ON denetimler(firma_id);
+CREATE INDEX IF NOT EXISTS idx_denetimler_denetci ON denetimler(denetci_id);
+CREATE INDEX IF NOT EXISTS idx_denetimler_tarih ON denetimler(denetim_tarihi);
+CREATE INDEX IF NOT EXISTS idx_bildirimler_kullanici ON bildirimler(kullanici_id);
+CREATE INDEX IF NOT EXISTS idx_bildirimler_okundu ON bildirimler(okundu);
+CREATE INDEX IF NOT EXISTS idx_oda_kullanicilari_kullanici_id ON oda_kullanicilari(kullanici_id);
+CREATE INDEX IF NOT EXISTS idx_oda_kullanicilari_oda_tipi ON oda_kullanicilari(oda_tipi);
 
 -- =====================================================
 -- TRİGGERLAR
@@ -947,12 +964,14 @@ CREATE TRIGGER trg_denetimler_guncelleme BEFORE UPDATE ON denetimler
     FOR EACH ROW EXECUTE FUNCTION guncelleme_tarihi_func();
 CREATE TRIGGER trg_oda_uyelikleri_guncelleme BEFORE UPDATE ON oda_uyelikleri
     FOR EACH ROW EXECUTE FUNCTION guncelleme_tarihi_func();
+CREATE TRIGGER trg_oda_kullanicilari_guncelleme BEFORE UPDATE ON oda_kullanicilari
+    FOR EACH ROW EXECUTE FUNCTION guncelleme_tarihi_func();
 
 -- Otomatik numara oluşturma
-CREATE SEQUENCE seq_siparis_no START 1;
-CREATE SEQUENCE seq_bildirim_no START 1;
-CREATE SEQUENCE seq_ziraat_uyelik START 1;
-CREATE SEQUENCE seq_sanayi_uyelik START 1;
+CREATE SEQUENCE IF NOT EXISTS seq_siparis_no START 1;
+CREATE SEQUENCE IF NOT EXISTS seq_bildirim_no START 1;
+CREATE SEQUENCE IF NOT EXISTS seq_ziraat_uyelik START 1;
+CREATE SEQUENCE IF NOT EXISTS seq_sanayi_uyelik START 1;
 
 CREATE OR REPLACE FUNCTION siparis_no_olustur()
 RETURNS TRIGGER AS $$
@@ -962,6 +981,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_siparis_no ON siparisler;
 CREATE TRIGGER trg_siparis_no BEFORE INSERT ON siparisler
     FOR EACH ROW EXECUTE FUNCTION siparis_no_olustur();
 
@@ -973,6 +993,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_bildirim_no ON resmi_bildirimler;
 CREATE TRIGGER trg_bildirim_no BEFORE INSERT ON resmi_bildirimler
     FOR EACH ROW EXECUTE FUNCTION bildirim_no_olustur();
 
@@ -988,6 +1009,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_uyelik_no ON oda_uyelikleri;
 CREATE TRIGGER trg_uyelik_no BEFORE INSERT ON oda_uyelikleri
     FOR EACH ROW EXECUTE FUNCTION uyelik_no_olustur();
 
@@ -1032,6 +1054,7 @@ GROUP BY c.id, k.id, s.id;
 -- SEED DATA
 -- =====================================================
 
+-- Sektörler
 INSERT INTO sektorler (kod, ad) VALUES
     ('ENERJI', 'Enerji'),
     ('TARIM', 'Tarım'),
@@ -1039,30 +1062,56 @@ INSERT INTO sektorler (kod, ad) VALUES
     ('GIDA', 'Gıda'),
     ('KIMYA', 'Kimya'),
     ('INSAAT', 'İnşaat'),
-    ('DIGER', 'Diğer');
+    ('DIGER', 'Diğer')
+ON CONFLICT (kod) DO NOTHING;
 
+-- Sertifika Türleri
 INSERT INTO sertifika_turleri (kod, ad, gecerlilik_suresi) VALUES
     ('ORGANIK', 'Organik Üretim Sertifikası', 12),
     ('IYI_TARIM', 'İyi Tarım Uygulaması', 24),
     ('ISO9001', 'ISO 9001 Kalite Yönetimi', 36),
     ('ISO14001', 'ISO 14001 Çevre Yönetimi', 36),
-    ('HALAL', 'Helal Gıda Sertifikası', 12);
+    ('HALAL', 'Helal Gıda Sertifikası', 12)
+ON CONFLICT (kod) DO NOTHING;
 
+-- Birimler (Büyük harf kodları)
 INSERT INTO birimler (kod, ad, sembol, tur) VALUES
     ('TON', 'Ton', 't', 'agirlik'),
     ('KG', 'Kilogram', 'kg', 'agirlik'),
     ('M3', 'Metreküp', 'm³', 'hacim'),
     ('LT', 'Litre', 'lt', 'hacim'),
-    ('ADET', 'Adet', 'adet', 'adet');
+    ('ADET', 'Adet', 'adet', 'adet')
+ON CONFLICT (kod) DO NOTHING;
 
+-- Birimler (Küçük harf kodları - Frontend'den gelen veriler için)
+INSERT INTO birimler (kod, ad, sembol, tur) VALUES
+    ('ton', 'Ton', 'ton', 'agirlik'),
+    ('kg', 'Kilogram', 'kg', 'agirlik'),
+    ('m3', 'Metreküp', 'm³', 'hacim'),
+    ('lt', 'Litre', 'lt', 'hacim')
+ON CONFLICT (kod) DO NOTHING;
+
+-- Atık Türleri (Büyük harf kodları)
 INSERT INTO atik_turleri (kod, ad) VALUES
     ('HAYVANSAL', 'Hayvansal Gübre'),
     ('BITKISEL', 'Bitkisel Atık'),
     ('TARIMSAL', 'Tarımsal Sanayi Atığı'),
     ('ORGANIK', 'Organik Atık'),
     ('BIYOKUTLE', 'Biyokütle'),
-    ('DIGER', 'Diğer');
+    ('DIGER', 'Diğer')
+ON CONFLICT (kod) DO NOTHING;
 
+-- Atık Türleri (Küçük harf kodları - Frontend'de kullanılan kodlar)
+INSERT INTO atik_turleri (kod, ad, aciklama, aktif) VALUES
+    ('hayvansal-gubre', 'Hayvansal Gübre', 'Hayvansal gübre atıkları', TRUE),
+    ('bitkisel-atik', 'Bitkisel Atık', 'Bitkisel kökenli atıklar', TRUE),
+    ('tarimsal-sanayi', 'Tarımsal Sanayi Yan Ürünü', 'Tarımsal sanayi atıkları', TRUE),
+    ('organik-atik', 'Organik Atık', 'Organik kökenli atıklar', TRUE),
+    ('biyokutle', 'Biyokütle', 'Biyokütle atıkları', TRUE),
+    ('diger', 'Diğer Atık Türleri', 'Diğer atık türleri', TRUE)
+ON CONFLICT (kod) DO NOTHING;
+
+-- Ürün Kategorileri
 INSERT INTO urun_kategorileri (kod, ad) VALUES
     ('ATIK', 'Çiftlik Atıkları'),
     ('GUBRE', 'Organik Gübre'),
@@ -1070,19 +1119,25 @@ INSERT INTO urun_kategorileri (kod, ad) VALUES
     ('BIYOKUTLE', 'Biyokütle'),
     ('TOPRAK', 'Toprak İyileştirici'),
     ('YEM', 'Yem'),
-    ('ENERJI', 'Enerji');
+    ('ENERJI', 'Enerji')
+ON CONFLICT (kod) DO NOTHING;
 
+-- Kullanıcılar (Admin hesapları)
 INSERT INTO kullanicilar (ad, soyad, eposta, sifre_hash, rol, durum, eposta_dogrulandi, sartlar_kabul) VALUES 
     ('Sistem', 'Yöneticisi', 'admin@yesileksen.com', crypt('Admin123!', gen_salt('bf')), 'super_yonetici', 'aktif', TRUE, TRUE),
     ('Ziraat', 'Yöneticisi', 'ziraat@yesileksen.com', crypt('Ziraat123!', gen_salt('bf')), 'ziraat_yoneticisi', 'aktif', TRUE, TRUE),
-    ('Sanayi', 'Yöneticisi', 'sanayi@yesileksen.com', crypt('Sanayi123!', gen_salt('bf')), 'sanayi_yoneticisi', 'aktif', TRUE, TRUE);
+    ('Sanayi', 'Yöneticisi', 'sanayi@yesileksen.com', crypt('Sanayi123!', gen_salt('bf')), 'sanayi_yoneticisi', 'aktif', TRUE, TRUE)
+ON CONFLICT (eposta) DO NOTHING;
 
+-- Rapor Türleri
 INSERT INTO rapor_turleri (kod, ad) VALUES
     ('SDG', 'SDG Raporu'),
     ('GENEL', 'Genel Rapor'),
     ('FINANSAL', 'Finansal Rapor'),
-    ('CEVRESEL', 'Çevresel Rapor');
+    ('CEVRESEL', 'Çevresel Rapor')
+ON CONFLICT (kod) DO NOTHING;
 
+-- Bildirim Türleri
 INSERT INTO bildirim_turleri (kod, ad) VALUES
     ('SISTEM', 'Sistem Bildirimi'),
     ('BASVURU', 'Başvuru Durumu'),
@@ -1093,8 +1148,10 @@ INSERT INTO bildirim_turleri (kod, ad) VALUES
     ('UYARI', 'Uyarı'),
     ('URUN_DUZENLEME', 'Ürün Düzenleme Talebi'),
     ('URUN_SILME', 'Ürün Silme Talebi'),
-    ('BELGE_GUNCELLEME', 'Belge Güncelleme');
+    ('BELGE_GUNCELLEME', 'Belge Güncelleme')
+ON CONFLICT (kod) DO NOTHING;
 
+-- Belge Türleri (Ana şemadaki belgeler)
 INSERT INTO belge_turleri (kod, ad, gecerlilik_suresi, zorunlu) VALUES
     ('TAPU', 'Tapu Belgesi', NULL, TRUE),
     ('RUHSAT', 'İşletme Ruhsatı', 12, TRUE),
@@ -1107,38 +1164,60 @@ INSERT INTO belge_turleri (kod, ad, gecerlilik_suresi, zorunlu) VALUES
     ('URUN_FOTOGRAFI', 'Ürün Fotoğrafı', NULL, TRUE),
     ('MENSEI_BELGESI', 'Menşei Belgesi (ÇKS / İşletme Tescil)', NULL, TRUE),
     ('LABORATUVAR_ANALIZ', 'Laboratuvar Analiz Raporu', 12, FALSE),
-    ('TICARET_SICIL_GAZETESI', 'Ticaret Sicil Gazetesi', NULL, TRUE);
+    ('TICARET_SICIL_GAZETESI', 'Ticaret Sicil Gazetesi', NULL, TRUE)
+ON CONFLICT (kod) DO NOTHING;
 
+-- Belge Türleri - ÇİFTÇİ (Kayıt sisteminden)
+INSERT INTO belge_turleri (kod, ad, zorunlu, aktif) VALUES
+    ('tapu_kira', 'Tapu Senedi veya Onaylı Kira Sözleşmesi', TRUE, TRUE),
+    ('nufus_cuzdani', 'Nüfus Cüzdanı Fotokopisi', TRUE, TRUE),
+    ('ciftci_kutugu', 'Çiftçi Kütüğü Kaydı', TRUE, TRUE),
+    ('muvafakatname', 'Muvafakatname', FALSE, TRUE),
+    ('taahhutname', 'Taahhütname', FALSE, TRUE),
+    ('doner_sermaye', 'Döner Sermaye Ücret Makbuzu', FALSE, TRUE)
+ON CONFLICT (kod) DO NOTHING;
+
+-- Belge Türleri - ŞİRKET (Kayıt sisteminden)
+INSERT INTO belge_turleri (kod, ad, zorunlu, aktif) VALUES
+    ('ticaret_sicil', 'Ticaret Sicil Gazetesi', TRUE, TRUE),
+    ('vergi_levhasi', 'Vergi Levhası', TRUE, TRUE),
+    ('imza_sirkuleri', 'İmza Sirküleri', TRUE, TRUE),
+    ('faaliyet_belgesi', 'Faaliyet Belgesi', TRUE, TRUE),
+    ('oda_kayit', 'Oda Kayıt Sicil Sureti', TRUE, TRUE),
+    ('gida_isletme', 'Gıda İşletme Kayıt/Onay Belgesi', FALSE, TRUE),
+    ('sanayi_sicil', 'Sanayi Sicil Belgesi', FALSE, TRUE),
+    ('kapasite_raporu', 'Kapasite Raporu', FALSE, TRUE)
+ON CONFLICT (kod) DO NOTHING;
+
+-- Sistem Ayarları
 INSERT INTO ayarlar (anahtar, deger, deger_tipi, aciklama, herkese_acik) VALUES 
     ('site_adi', 'Yeşil-Eksen', 'metin', 'Site adı', TRUE),
     ('site_aciklama', 'Tarımı Sanayi ile Buluşturan Platform', 'metin', 'Site açıklaması', TRUE),
     ('bakim_modu', 'false', 'mantiksal', 'Bakım modu', FALSE),
-    ('maks_dosya_mb', '10', 'sayi', 'Maksimum dosya boyutu (MB)', FALSE);
+    ('maks_dosya_mb', '10', 'sayi', 'Maksimum dosya boyutu (MB)', FALSE)
+ON CONFLICT (anahtar) DO NOTHING;
 
 -- =====================================================
 -- KURULUM TAMAMLANDI
--- OPTİMİZE %100 NORMALİZE - 51 TABLO
--- Frontend İhtiyaçlarına Göre Düzenlendi
 -- =====================================================
 --
--- SON GÜNCELLEMELER (2024):
--- 1. belge_turleri tablosuna 'zorunlu' field'ı eklendi (normalizasyon korundu)
--- 2. Yeni belge türleri seed data olarak eklendi:
---    - İmza Sirküleri, Faaliyet Belgesi, Oda Kayıt Sicil Sureti
---    - Ürün Fotoğrafı, Menşei Belgesi, Laboratuvar Analiz Raporu
---    - Ticaret Sicil Gazetesi
--- 3. Yeni bildirim türleri eklendi:
---    - Ürün Düzenleme Talebi, Ürün Silme Talebi, Belge Güncelleme
--- 4. Tablo yapısına açıklayıcı commentler eklendi (Frontend ilişkileri belirtildi)
--- 5. Belge yönetimi için detaylı açıklamalar eklendi
+-- Bu dosya birleştirilmiş veritabanı kurulum dosyasıdır ve şunları içerir:
+-- 1. Kullanılan Sql.sql - Ana veritabanı şeması (51 tablo)
+-- 2. seed_data.sql - Kayıt sistemi için seed data
+-- 3. oda_kullanicilari_tablosu.sql - Oda kullanıcıları tablosu
 --
--- TABLO YAPISI DEĞİŞİKLİĞİ: YOK (57 tablo korundu)
--- NORMALİZASYON SEVİYESİ: %100 (3NF/BCNF korundu)
+-- TOPLAM: 52 TABLO
+-- - 51 tablo (ana şema)
+-- - 1 tablo (oda_kullanicilari - iamgroot sayfası için)
 --
--- FRONTEND SAYFALARI İÇİN HAZIR:
--- - urun_durum.tsx: urun_basvurulari + belgeler tabloları
--- - firma_basvuru_durum.tsx: firma_basvurulari + belgeler tabloları  
--- - urunlerim.tsx: urunler + teklifler tabloları
--- - ciftlik_detay.tsx: ciftlikler + urunler + ciftlik_sertifikalari tabloları
+-- ÖNEMLİ NOTLAR:
+-- - Tüm INSERT komutları ON CONFLICT DO NOTHING ile korumalıdır
+-- - Birden fazla kez çalıştırılabilir (idempotent)
+-- - Frontend'deki farklı kod formatları için hem büyük hem küçük harf kodlar eklenmiştir
+--
+-- ÇALIŞTIRMA:
+-- psql -U postgres -d yesileksen -f docs/yesileksen_birlesik_kurulum.sql
+-- 
+-- Veya pgAdmin'de bu dosyayı çalıştırın
 -- =====================================================
 

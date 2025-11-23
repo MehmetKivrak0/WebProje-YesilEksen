@@ -8,6 +8,10 @@ export default defineConfig({
     devSourcemap: true,
   },
   server: {
+    // YesilEksen projesi için sabit port
+    port: 5174,
+    host: true,
+    strictPort: true, // Port kullanımdaysa hata ver, başka porta geçme
     hmr: {
       overlay: false
     }

@@ -556,7 +556,7 @@ function Kayit() {
                     E-posta
                     {searchParams.get('provider') && (
                       <span className="text-xs text-subtle-light dark:text-subtle-dark ml-1">
-                        ({searchParams.get('provider') === 'github' ? 'GitHub' : 'LinkedIn'} ile giriş yaptınız)
+                        (GitHub ile giriş yaptınız)
                       </span>
                     )}
                   </label>

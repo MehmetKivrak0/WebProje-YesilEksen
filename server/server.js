@@ -13,7 +13,21 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        // İzin verilen origin'ler
+        const allowedOrigins = [
+            'http://localhost:5174',
+            'http://localhost:5173',
+            process.env.CLIENT_URL
+        ].filter(Boolean); // undefined değerleri temizle
+        
+        // Origin yoksa (ör. Postman, mobile app) veya izin verilen listede ise izin ver
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS policy ile izin verilmedi'));
+        }
+    },
     credentials: true
     // Bu yarar aynı domainden gelen istekleri kabul etmek için
 }));
@@ -28,6 +42,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', require('./src/routes/authRoutes.js'));
 app.use('/api/ciftlik', require('./src/routes/ciftlikRoutes.js'));
 app.use('/api/firma', require('./src/routes/firmaRoutes.js'));
+app.use('/api/ziraat', require('./src/routes/ziraatRoutes.js'));
+app.use('/api/documents', require('./src/routes/documentRoutes.js'));
 
 //HEALTH CHECK şuna yarar: 
 // API'ların çalışmasını kontrol etmek için
@@ -104,7 +120,8 @@ app.use((err, req, res, next) => {
 //Server başlatma şuna yarar:
 // Server'ı başlatmak için
 
-const PORT = process.env.PORT || 5000;
+// YesilEksen projesi için sabit port
+const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server ${PORT} portunda çalışıyor`);
     console.log(`📍 API: http://localhost:${PORT}/api`);

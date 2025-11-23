@@ -1,19 +1,20 @@
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import ZrtnNavbar from '../../../../components/zrtnavbar';
 import ApplicationFilters from './components/ApplicationFilters';
 import ApplicationSummaryCards from './components/ApplicationSummaryCards';
 import ApplicationTable from './components/ApplicationTable';
 import InspectModal from './components/modals/InspectModal';
 import RejectModal from './components/modals/RejectModal';
+import FarmLogModal from './components/modals/FarmLogModal';
+import type { FarmApplication } from './types';
 import { useFarmApplications } from './hooks/useFarmApplications';
-import { initialFarmApplications } from './data/farmApplications';
 
 function FarmApplicationsPage() {
+  const [showAllLogs, setShowAllLogs] = useState(false);
   const {
     selectedStatus,
     setSelectedStatus,
     applications,
-    setApplications,
     inspectedApplication,
     setInspectedApplication,
     rejectedApplication,
@@ -23,30 +24,26 @@ function FarmApplicationsPage() {
     documentReviews,
     updateDocumentStatus,
     updateDocumentReason,
+    updateDocumentAdminNote,
     filteredApplications,
     closeInspectModal,
-  } = useFarmApplications({ applications: initialFarmApplications });
+    handleApprove,
+    handleReject,
+    loading,
+    error,
+  } = useFarmApplications();
 
-  const handleRejectSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleRejectSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (rejectedApplication) {
-      const updatedApplications = applications.map((application) =>
-        application.farm === rejectedApplication.farm
-          ? {
-              ...application,
-              notes: `Red yanıtı: ${rejectReason}`,
-            }
-          : application,
-      );
-      setApplications(updatedApplications);
-      const updatedCurrent = updatedApplications.find((application) => application.farm === rejectedApplication.farm);
-      setInspectedApplication((current) =>
-        current && current.farm === rejectedApplication.farm ? updatedCurrent ?? current : current,
-      );
-      console.info('Güncellenen çiftlik başvuruları', updatedApplications);
+    if (rejectedApplication && rejectReason.trim()) {
+      await handleReject(rejectedApplication, rejectReason);
     }
-    setRejectedApplication(null);
-    setRejectReason('');
+  };
+
+  const handleApproveClick = async (application: typeof inspectedApplication) => {
+    if (application) {
+      await handleApprove(application);
+    }
   };
 
   return (
@@ -62,8 +59,18 @@ function FarmApplicationsPage() {
                 Yeni kayıt taleplerini, denetim süreçlerini ve sonuçlarını burada yönetin.
               </p>
             </div>
-            <ApplicationFilters selectedStatus={selectedStatus} onStatusChange={setSelectedStatus} />
+            <ApplicationFilters 
+              selectedStatus={selectedStatus} 
+              onStatusChange={setSelectedStatus}
+              onShowLogs={() => setShowAllLogs(true)}
+            />
           </div>
+
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-500 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+              {error}
+            </div>
+          )}
 
           <ApplicationSummaryCards applications={applications} />
 
@@ -72,7 +79,7 @@ function FarmApplicationsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-content-light dark:text-content-dark">Başvuru Listesi</h2>
                 <p className="text-sm text-subtle-light dark:text-subtle-dark">
-                  Filtreye göre görüntülenen {filteredApplications.length} kayıt
+                  {loading ? 'Yükleniyor...' : `Filtreye göre görüntülenen ${filteredApplications.length} kayıt`}
                 </p>
               </div>
               <button className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-primary/40 dark:hover:bg-primary/30">
@@ -81,11 +88,18 @@ function FarmApplicationsPage() {
               </button>
             </div>
 
-            <ApplicationTable
-              applications={filteredApplications}
-              onInspect={setInspectedApplication}
-              onReject={setRejectedApplication}
-            />
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-subtle-light dark:text-subtle-dark">Yükleniyor...</div>
+              </div>
+            ) : (
+              <ApplicationTable
+                applications={filteredApplications}
+                onInspect={setInspectedApplication}
+                onReject={setRejectedApplication}
+                onApprove={handleApprove}
+              />
+            )}
           </div>
         </div>
       </main>
@@ -97,6 +111,8 @@ function FarmApplicationsPage() {
           onClose={closeInspectModal}
           onUpdateDocumentStatus={updateDocumentStatus}
           onUpdateDocumentReason={updateDocumentReason}
+          onUpdateDocumentAdminNote={updateDocumentAdminNote}
+          onApprove={handleApproveClick}
         />
       )}
 
@@ -110,6 +126,12 @@ function FarmApplicationsPage() {
             setRejectReason('');
           }}
           onSubmit={handleRejectSubmit}
+        />
+      )}
+
+      {showAllLogs && (
+        <FarmLogModal
+          onClose={() => setShowAllLogs(false)}
         />
       )}
     </div>

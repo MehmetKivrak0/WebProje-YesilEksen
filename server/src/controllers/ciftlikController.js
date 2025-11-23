@@ -35,8 +35,8 @@ const getPanelStats = async (req, res) => {
             `SELECT COUNT(DISTINCT t.id) as bekleyen 
              FROM teklifler t 
              JOIN urunler u ON t.urun_id = u.id 
-             WHERE u.ciftlik_id = $1 AND t.durum = 'bekleyen'`,
-            [ciftlik_id] // Artık sadece $1 için ciftlik_id gönderiyoruz
+             WHERE u.ciftlik_id = $1 AND t.durum = 'beklemede'`,
+            [ciftlik_id]
         );
 
         const satisResult = await pool.query(
@@ -103,7 +103,7 @@ const getMyProducts = async (req, res) => {
         );
 
         if (citflikResult.rows.length === 0) {
-            return res.stats(404).json({
+            return res.status(404).json({
                 success: false,
                 message: 'Çiftlik bulunamadı'
             });
@@ -205,7 +205,8 @@ const addProduct = async (req, res) => {
         const userId = req.user.id;
         const { title, miktar, price, category, desc, birim = 'kg' } = req.body;
 
-        if (!title || !miktar || !price || !category || !desc) {
+        // Validasyon
+        if (!title || !miktar || !price || !category) {
             return res.status(400).json({
                 success: false,
                 message: 'Gerekli alanları doldurunuz'
@@ -231,9 +232,9 @@ const addProduct = async (req, res) => {
             [ciftlik_id, title, desc, miktar, birim, price, category]
         );
 
-        res.json({
+        res.status(201).json({
             success: true,
-            message: 'Ürün başarıyla oluşturuldu',
+            message: 'Ürün başarıyla eklendi',
             product: result.rows[0]
         });
 
@@ -276,10 +277,17 @@ const updateProduct = async (req, res) => {
         //Ürünü güncelle
         const result = await pool.query(
             `UPDATE urunler 
-            SET baslik = $1, aciklama = $2, miktar = $3, birim = $4, fiyat = $5, kategori = $6, durum = $7
-            WHERE id = $8 AND ciftlik_id = $9
+            SET baslik = COALESCE($1, baslik),
+                aciklama = COALESCE($2, aciklama),
+                miktar = COALESCE($3, miktar),
+                birim = COALESCE($4, birim),
+                fiyat = COALESCE($5, fiyat),
+                kategori = COALESCE($6, kategori),
+                durum = COALESCE($7, durum),
+                guncelleme_tarihi = CURRENT_TIMESTAMP
+            WHERE id = $8
             RETURNING *`,
-            [title, desc, miktar, birim, price, category, durum, productId, ciftlik_id]
+            [title, desc, miktar, birim, price, category, durum, productId]
         );
 
         res.json({
@@ -315,20 +323,13 @@ const deleteProduct = async (req, res) => {
         const ciftlik_id = citflikResult.rows[0].id;
 
         //Ürünü soft delete yap (durum = 'silindi')
-        const result = await pool.query(
+        await pool.query(
             `UPDATE urunler 
-            SET durum = 'silindi'
-            WHERE id = $1 AND ciftlik_id = $2
-            RETURNING *`,
-            [productId, ciftlik_id]
+            SET durum = 'silindi', 
+                guncelleme_tarihi = CURRENT_TIMESTAMP
+            WHERE id = $1`,
+            [productId]
         );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Ürün bulunamadı'
-            });
-        }
 
         res.json({
             success: true,

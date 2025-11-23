@@ -145,3 +145,4 @@ Ayrıca frontend'de dosya validasyonu eklendi:
 **Durum:** ✅ Test Edildi ve Çalışıyor
 
 
+

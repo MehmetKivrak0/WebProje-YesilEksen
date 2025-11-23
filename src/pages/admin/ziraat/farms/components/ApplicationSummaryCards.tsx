@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { ziraatService } from '../../../../../services/ziraatService';
 import type { FarmApplication } from '../types';
 
 type ApplicationSummaryCardsProps = {
@@ -5,11 +7,32 @@ type ApplicationSummaryCardsProps = {
 };
 
 function ApplicationSummaryCards({ applications }: ApplicationSummaryCardsProps) {
-  const pendingCount = applications.filter(
+  const [stats, setStats] = useState<{
+    newApplications: number;
+    inspections: number;
+    approved: number;
+  } | null>(null);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const response = await ziraatService.getDashboardStats();
+      if (response.success) {
+        setStats(response.stats.farmSummary);
+      }
+    } catch (error) {
+      console.error('Stats yükleme hatası:', error);
+    }
+  };
+
+  const pendingCount = stats?.newApplications || applications.filter(
     (farm) => farm.status === 'İlk İnceleme' || farm.status === 'Denetimde',
   ).length;
-  const approvedCount = applications.filter((farm) => farm.status === 'Onaylandı').length;
-  const missingDocumentsCount = applications.filter((farm) => farm.status === 'Evrak Bekliyor').length;
+  const approvedCount = stats?.approved || applications.filter((farm) => farm.status === 'Onaylandı').length;
+  const missingDocumentsCount = stats?.inspections || applications.filter((farm) => farm.status === 'Evrak Bekliyor').length;
 
   const cards = [
     {
@@ -18,14 +41,14 @@ function ApplicationSummaryCards({ applications }: ApplicationSummaryCardsProps)
       description: 'Başlangıç veya denetim sürecindeki tüm başvurular',
     },
     {
-      label: 'Son Hafta Onayları',
+      label: 'Onaylanan Çiftlikler',
       value: approvedCount,
-      description: 'Son 7 günde onaylanan çiftlik sayısı',
+      description: 'Toplam onaylanan çiftlik sayısı',
     },
     {
-      label: 'Evrak Eksikleri',
+      label: 'Denetim Sürecinde',
       value: missingDocumentsCount,
-      description: 'Tamamlanması gereken evrak sayısı',
+      description: 'Denetim sürecindeki başvurular',
     },
   ];
 

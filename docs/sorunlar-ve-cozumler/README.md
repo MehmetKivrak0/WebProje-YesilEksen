@@ -27,16 +27,36 @@ Bu klasör, projede karşılaşılan sorunlar ve çözümlerinin dokümantasyonu
 5. **[Debug Login](./DEBUG_LOGIN.md)**
    - Giriş hatalarını debug etme yöntemleri
 
+6. **[403 Forbidden - Oda Yöneticileri Giriş Hatası](./403-forbidden-oda-yoneticisi-giris.md)** ✅
+   - **Tarih:** 2024-12-XX
+   - **Sorun:** Ziraat ve sanayi yöneticileri giriş yaparken "Hesabınız admin onayı bekliyor" hatası alıyordu
+   - **Çözüm:** Oda yöneticileri için durum kontrolü atlandı, `oda_kullanicilari` tablosu kontrolü eklendi
+
+7. **[404 Not Found - Şifremi Unuttum E-posta Kontrolü Hatası](./404-not-found-check-email-endpoint.md)** ✅
+   - **Tarih:** 2024-12-XX
+   - **Sorun:** Şifremi unuttum sayfasında e-posta kontrolü yapılırken 404 hatası alınıyordu
+   - **Çözüm:** Yeni endpoint eklendi ama server yeniden başlatılmamıştı, server yeniden başlatıldı
+
+8. **[500 Internal Server Error - oda_kullanicilari Normalizasyon Sorunu](./500-internal-server-error-oda-kullanicilari-normalizasyon.md)** ✅
+   - **Tarih:** 2024-11-22
+   - **Sorun:** Oda yöneticisi kaydı sırasında 500 hatası, `oda_kullanicilari` tablosu normalizasyon ihlali yaratıyordu
+   - **Çözüm:** `oda_kullanicilari` tablosu kaldırıldı, sadece `kullanicilar.rol` kullanılıyor, `oda_tipi` rol'den türetiliyor
+
 ### 🎨 Kullanıcı Deneyimi İyileştirmeleri
 
-6. **[Belge Yükleme Bildirimi ve Validasyon](./belge-yukleme-bildirimi.md)** ✅
+9. **[Belge Yükleme Bildirimi ve Validasyon](./belge-yukleme-bildirimi.md)** ✅
    - **Tarih:** 2024-11-19
    - **Özellik:** Belge yüklendiğinde anında geri bildirim, dosya validasyonu
    - **Fayda:** Hatalar önceden yakalanıyor, kullanıcı deneyimi iyileştirildi
 
+10. **[Ziraat Dashboard API Entegrasyonu](./OZET_NOT_ZIRAAT_DASHBOARD_ENTEGRASYON.md)** ✅
+   - **Tarih:** 2024-12-XX
+   - **Özellik:** Dashboard sayfasının API'ye tam entegrasyonu, gerçek zamanlı veri yükleme
+   - **Fayda:** Statik veriler yerine dinamik API verileri, onaylama/reddetme işlemleri çalışıyor
+
 ### 🗄️ Veritabanı Sorunları
 
-4. **[Veritabanı Güncelleme](./VERITABANI_GUNCELLEME.md)**
+11. **[Veritabanı Güncelleme](./VERITABANI_GUNCELLEME.md)**
    - Veritabanı güncellemeleri ve migration'lar
 
 ## 📝 Yeni Sorun Ekleme
@@ -53,19 +73,24 @@ Yeni bir sorun ve çözüm dokümantasyonu eklerken:
 
 ## 🔍 Hızlı Erişim
 
-- **Giriş Sorunları:** [401 Unauthorized](./401-unauthorized-login-hatasi.md)
-- **Veritabanı Sorunları:** [Veritabanı Güncelleme](./VERITABANI_GUNCELLEME.md)
+- **Giriş Sorunları:** 
+  - [401 Unauthorized](./401-unauthorized-login-hatasi.md)
+  - [403 Forbidden - Oda Yöneticileri](./403-forbidden-oda-yoneticisi-giris.md)
+  - [404 Not Found - Şifremi Unuttum](./404-not-found-check-email-endpoint.md)
+- **Veritabanı Sorunları:** 
+  - [500 Internal Server Error - oda_kullanicilari Normalizasyon](./500-internal-server-error-oda-kullanicilari-normalizasyon.md)
+  - [Veritabanı Güncelleme](./VERITABANI_GUNCELLEME.md)
 - **Debug Yöntemleri:** [Debug Login](./DEBUG_LOGIN.md)
 
 ## 📊 Sorun İstatistikleri
 
-- **Toplam Sorun:** 6
-- **Çözülen:** 3
-- **Özellik Eklendi:** 1
+- **Toplam Sorun:** 9
+- **Çözülen:** 8
+- **Özellik Eklendi:** 2
 - **Devam Eden:** 0
 - **Çözülemeyen:** 0
 
 ---
 
-**Son Güncelleme:** 2024-11-19
+**Son Güncelleme:** 2024-11-22
 

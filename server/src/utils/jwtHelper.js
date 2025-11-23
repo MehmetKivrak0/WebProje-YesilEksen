@@ -16,8 +16,16 @@ const verifyToken = (token) => {
     }
 };
 
+/**
+ * Token'dan kullanıcı bilgilerini çıkar
+ */
+const decodeToken = (token) => {
+    return jwt.decode(token);
+};
+
 module.exports = {
     generateToken,
-    verifyToken
+    verifyToken,
+    decodeToken
 };
 

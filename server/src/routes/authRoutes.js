@@ -1,7 +1,7 @@
 // Auth Routes
 const express = require('express');
 const router = express.Router();
-const { register, login, getMe, logout } = require('../controllers/authController');
+const { register, login, getMe, logout, checkEmail, resetPassword } = require('../controllers/authController');
 const { auth } = require('../middleware/auth');
 const { uploadFields } = require('../config/multer');
 
@@ -27,4 +27,7 @@ router.post('/register', multerMiddleware, register);
 router.post('/login',login);
 router.get('/me',auth,getMe);
 router.post('/logout',auth,logout);
+router.post('/check-email', checkEmail);
+router.post('/reset-password', resetPassword);
+
 module.exports = router;

@@ -471,26 +471,29 @@ function ProductApplicationsPage() {
                             <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusClass}`}>
                               {review.status}
                             </span>
-                            <a
-                              href={canDownload ? document.url : '#'}
-                              download={canDownload ? '' : undefined}
-                              target={canDownload ? '_blank' : undefined}
-                              rel={canDownload ? 'noopener noreferrer' : undefined}
-                              aria-disabled={!canDownload}
-                              onClick={(event) => {
-                                if (!canDownload) {
-                                  event.preventDefault();
-                                }
-                              }}
-                              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                                canDownload
-                                  ? 'border border-primary text-primary hover:bg-primary/10 dark:hover:bg-primary/20'
-                                  : 'border border-border-light dark:border-border-dark text-subtle-light/70 dark:text-subtle-dark/70 cursor-not-allowed'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-base">download</span>
-                              İndir
-                            </a>
+                            {document.url && (
+                              <>
+                                <a
+                                  href={document.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 dark:hover:bg-primary/20"
+                                  title="Yeni sekmede görüntüle"
+                                >
+                                  <span className="material-symbols-outlined text-base">visibility</span>
+                                  Görüntüle
+                                </a>
+                                <a
+                                  href={`${document.url}?download=true`}
+                                  download
+                                  className="inline-flex items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 dark:hover:bg-primary/20"
+                                  title="İndir"
+                                >
+                                  <span className="material-symbols-outlined text-base">download</span>
+                                  İndir
+                                </a>
+                              </>
+                            )}
                             <button
                               type="button"
                               onClick={() => updateDocumentStatus(document.name, 'Onaylandı')}
