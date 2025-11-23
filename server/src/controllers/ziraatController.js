@@ -127,7 +127,7 @@ const getDashboardStats = async (req, res) => {
         const farmStats = await pool.query(`
             SELECT 
                 COUNT(*) FILTER (WHERE durum = 'ilk_inceleme') as newApplications,
-                COUNT(*) FILTER (WHERE durum = 'denetimde') as inspections,
+                0 as inspections,
                 COUNT(*) FILTER (WHERE durum = 'onaylandi') as approved
             FROM ciftlik_basvurulari
         `);
@@ -220,6 +220,9 @@ const getProductApplications = async (req, res) => {
         const countResult = await pool.query(countQuery, params);
 
         // Sayfalama ile veriler
+        // LIMIT ve OFFSET için parametre indekslerini doğru şekilde ayarla
+        const limitParamIndex = paramIndex;
+        const offsetParamIndex = paramIndex + 1;
         params.push(limit, offset);
         const dataQuery = `
             SELECT 
@@ -241,7 +244,7 @@ const getProductApplications = async (req, res) => {
             JOIN kullanicilar k ON c.kullanici_id = k.id
             ${whereClause}
             ORDER BY u.basvuru_tarihi DESC
-            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
         const dataResult = await pool.query(dataQuery, params);
 
@@ -259,16 +262,24 @@ const getProductApplications = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Product applications hatası:', error);
+        console.error('❌ Product applications hatası:', error);
         console.error('Hata detayı:', {
             message: error.message,
             stack: error.stack,
-            query: error.query || 'N/A'
+            query: error.query || 'N/A',
+            code: error.code,
+            detail: error.detail,
+            hint: error.hint
         });
         res.status(500).json({
             success: false,
             message: 'Ürün başvuruları alınamadı',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                detail: error.detail,
+                hint: error.hint,
+                code: error.code
+            } : undefined
         });
     }
 };
@@ -307,7 +318,7 @@ const getFarmApplications = async (req, res) => {
         let paramIndex = 1;
 
         // Durum filtresi - ciftlik_basvurulari tablosundaki durum değerleri
-        // Frontend mapping: 'ilk_inceleme' -> 'İlk İnceleme', 'denetimde' -> 'Denetimde', 'onaylandi' -> 'Onaylandı', 'reddedildi' -> 'Reddedildi'
+        // Frontend mapping: 'ilk_inceleme' -> 'İlk İnceleme', 'onaylandi' -> 'Onaylandı', 'reddedildi' -> 'Reddedildi'
         if (status) {
             whereClause += ` AND cb.durum = $${paramIndex}`;
             params.push(status);
@@ -316,11 +327,11 @@ const getFarmApplications = async (req, res) => {
             // Durum filtresi yoksa onay bekleyen ve reddedilen başvuruları göster
             // Onaylanmış başvurular (durum = 'onaylandi') varsayılan olarak gösterilmez
             // çünkü bunlar ciftlikler tablosunda zaten aktif çiftlik olarak var
-            whereClause += ` AND cb.durum IN ('ilk_inceleme', 'denetimde', 'reddedildi')`;
+            whereClause += ` AND cb.durum IN ('ilk_inceleme', 'reddedildi')`;
         }
 
         if (search) {
-            whereClause += ` AND (cb.ciftlik_adi ILIKE $${paramIndex} OR cb.sahip_adi ILIKE $${paramIndex} OR k.ad ILIKE $${paramIndex} OR k.soyad ILIKE $${paramIndex} OR cb.id::text ILIKE $${paramIndex})`;
+            whereClause += ` AND (cb.ciftlik_adi ILIKE $${paramIndex} OR cb.sahip_adi ILIKE $${paramIndex} OR COALESCE(k.ad, '') ILIKE $${paramIndex} OR COALESCE(k.soyad, '') ILIKE $${paramIndex} OR cb.id::text ILIKE $${paramIndex})`;
             params.push(`%${search}%`);
             paramIndex++;
         }
@@ -329,7 +340,7 @@ const getFarmApplications = async (req, res) => {
         const countQuery = `
             SELECT COUNT(*) as total
             FROM ciftlik_basvurulari cb
-            JOIN kullanicilar k ON cb.kullanici_id = k.id
+            JOIN kullanicilar k ON cb.kullanici_id = k.id AND k.silinme IS NULL
             ${whereClause}
         `;
         
@@ -341,6 +352,9 @@ const getFarmApplications = async (req, res) => {
         const countResult = await pool.query(countQuery, params);
 
         // Sayfalama ile veriler - ciftlik_basvurulari tablosundan, belgeler de dahil
+        // LIMIT ve OFFSET için parametre indekslerini doğru şekilde ayarla
+        const limitParamIndex = paramIndex;
+        const offsetParamIndex = paramIndex + 1;
         params.push(limit, offset);
         const dataQuery = `
             SELECT 
@@ -348,7 +362,6 @@ const getFarmApplications = async (req, res) => {
                 cb.ciftlik_adi as name,
                 cb.sahip_adi as owner,
                 cb.durum as status,
-                cb.denetim_tarihi as "inspectionDate",
                 cb.guncelleme as "lastUpdate",
                 cb.id::text as "applicationNumber",
                 cb.konum as sector,
@@ -362,7 +375,7 @@ const getFarmApplications = async (req, res) => {
                 COALESCE(
                     json_agg(
                         json_build_object(
-                            'name', bt.ad,
+                            'name', COALESCE(bt.ad, b.ad, 'Belge'),
                             'status', CASE 
                                 WHEN b.durum = 'onaylandi' THEN 'Onaylandı'
                                 WHEN b.durum = 'reddedildi' THEN 'Reddedildi'
@@ -371,22 +384,27 @@ const getFarmApplications = async (req, res) => {
                             END,
                             'url', b.dosya_yolu,
                             'belgeId', b.id,
-                            'farmerNote', COALESCE(b.kullanici_notu, ''),
+                            'farmerNote', COALESCE(b.red_nedeni, b.kullanici_notu, ''),
                             'adminNote', COALESCE(b.yonetici_notu, '')
-                        )
-                        ORDER BY bt.ad
+                        ) ORDER BY COALESCE(bt.ad, b.ad, '')
                     ) FILTER (WHERE b.id IS NOT NULL),
                     '[]'::json
                 ) as documents
             FROM ciftlik_basvurulari cb
-            JOIN kullanicilar k ON cb.kullanici_id = k.id
-            LEFT JOIN belgeler b ON b.basvuru_id = cb.id AND b.basvuru_tipi = 'ciftlik_basvurusu'
-            LEFT JOIN belge_turleri bt ON b.belge_turu_id = bt.id
+            JOIN kullanicilar k ON cb.kullanici_id = k.id AND k.silinme IS NULL
+            LEFT JOIN belgeler b ON b.basvuru_id = cb.id AND b.basvuru_tipi = 'ciftlik_basvurusu' AND b.basvuru_id IS NOT NULL
+            LEFT JOIN belge_turleri bt ON b.belge_turu_id = bt.id AND bt.id IS NOT NULL
             ${whereClause}
-            GROUP BY cb.id, cb.ciftlik_adi, cb.sahip_adi, cb.durum, cb.denetim_tarihi, cb.guncelleme, cb.konum, cb.basvuru_tarihi, k.eposta, k.telefon, cb.notlar
+            GROUP BY cb.id, cb.ciftlik_adi, cb.sahip_adi, cb.durum, cb.guncelleme, cb.konum, cb.basvuru_tarihi, k.eposta, k.telefon, cb.notlar
             ORDER BY cb.basvuru_tarihi DESC
-            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔍 Farm applications data query:', dataQuery);
+            console.log('🔍 Data query params:', params);
+        }
+        
         const dataResult = await pool.query(dataQuery, params);
 
         const total = parseInt(countResult.rows[0].total || 0);
@@ -455,16 +473,24 @@ const getFarmApplications = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Farm applications hatası:', error);
+        console.error('❌ Farm applications hatası:', error);
         console.error('Hata detayı:', {
             message: error.message,
             stack: error.stack,
-            query: error.query || 'N/A'
+            query: error.query || 'N/A',
+            code: error.code,
+            detail: error.detail,
+            hint: error.hint
         });
         res.status(500).json({
             success: false,
             message: 'Çiftlik başvuruları alınamadı',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                detail: error.detail,
+                hint: error.hint,
+                code: error.code
+            } : undefined
         });
     }
 };

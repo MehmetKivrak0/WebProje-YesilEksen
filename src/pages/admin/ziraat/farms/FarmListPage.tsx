@@ -131,7 +131,7 @@ function FarmListPage() {
         onClose={closeProductsModal}
       />
 
-      <FarmToast toast={toast} />
+      <FarmToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

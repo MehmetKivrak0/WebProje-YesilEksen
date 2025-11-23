@@ -39,7 +39,6 @@ export interface FarmApplication {
     name: string;
     owner: string;
     status: string;
-    inspectionDate: string;
     lastUpdate?: string;
     applicationNumber: string;
     sector: string;
@@ -99,7 +98,12 @@ export const ziraatService = {
     },
     //Çiftlik Başvurusu Onayla
     approveFarm: async (id: string, data?: { note?: string }): Promise<{ success: boolean; message: string }> => {
-        const response = await api.post(`/ziraat/farms/${id}/approve`, data);
+        // ID'yi temizle ve doğrula
+        const cleanId = String(id).trim();
+        if (!cleanId) {
+            throw new Error('Geçersiz başvuru ID\'si');
+        }
+        const response = await api.post(`/ziraat/farms/${encodeURIComponent(cleanId)}/approve`, data);
         return response.data;
     },
 

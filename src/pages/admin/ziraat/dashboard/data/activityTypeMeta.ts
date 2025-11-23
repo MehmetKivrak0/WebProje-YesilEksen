@@ -22,12 +22,5 @@ export const activityTypeMeta: ActivityTypeMetaMap = {
     bubbleClass: 'bg-green-100 dark:bg-green-900/40',
     iconClass: 'text-green-600 dark:text-green-300',
   },
-  denetim: {
-    label: 'Denetim',
-    icon: 'assignment',
-    badgeClass: 'bg-sky-100 text-sky-700 dark:bg-sky-900/70 dark:text-sky-200',
-    bubbleClass: 'bg-sky-100 dark:bg-sky-900/40',
-    iconClass: 'text-sky-600 dark:text-sky-300',
-  },
 };
 

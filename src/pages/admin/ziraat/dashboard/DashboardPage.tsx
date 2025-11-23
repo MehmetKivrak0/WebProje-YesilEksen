@@ -53,17 +53,37 @@ function DashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      // Paralel olarak tüm verileri yükle
+      // Paralel olarak tüm verileri yükle - her isteği ayrı ayrı yakala
       const [statsRes, productsRes, farmsRes, farmersRes, dashboardProductsRes, activityRes] = await Promise.all([
-        ziraatService.getDashboardStats(),
-        ziraatService.getProductApplications({ limit: 3 }),
-        ziraatService.getFarmApplications({ limit: 3 }),
-        ziraatService.getRegisteredFarmers().catch(() => ({ success: true, farmers: [], pagination: {} })),
-        ziraatService.getDashboardProducts().catch(() => ({ success: true, products: [] })),
-        ziraatService.getActivityLog().catch(() => ({ success: true, activities: [], pagination: {} }))
+        ziraatService.getDashboardStats().catch((err) => {
+          console.error('Dashboard stats hatası:', err);
+          return { success: false, stats: { productSummary: { pending: 0, approved: 0, revision: 0 }, farmSummary: { newApplications: 0, inspections: 0, approved: 0 }, totalFarmers: 0, totalProducts: 0 } };
+        }),
+        ziraatService.getProductApplications({ limit: 3 }).catch((err) => {
+          console.error('Product applications hatası:', err);
+          return { success: false, applications: [], pagination: {} };
+        }),
+        ziraatService.getFarmApplications({ limit: 3 }).catch((err) => {
+          console.error('Farm applications hatası:', err);
+          return { success: false, applications: [], pagination: {} };
+        }),
+        ziraatService.getRegisteredFarmers().catch((err) => {
+          console.error('Registered farmers hatası:', err);
+          return { success: true, farmers: [], pagination: {} };
+        }),
+        ziraatService.getDashboardProducts().catch((err) => {
+          console.error('Dashboard products hatası:', err);
+          return { success: true, products: [] };
+        }),
+        ziraatService.getActivityLog().catch((err) => {
+          console.error('Activity log hatası:', err);
+          return { success: true, activities: [], pagination: {} };
+        })
       ]);
 
-      setDashboardStats(statsRes.stats);
+      if (statsRes.stats) {
+        setDashboardStats(statsRes.stats);
+      }
       setProductApplications(productsRes.applications || []);
       setFarmApplications(farmsRes.applications || []);
       
@@ -135,7 +155,7 @@ function DashboardPage() {
       : activityLogData.filter((activity) => activity.type === activityFilter);
 
   const getStatusClass = (status: string) => {
-    if (status === 'beklemede' || status === 'incelemede' || status === 'İncelemede' || status === 'ilk_inceleme' || status === 'denetimde' || status === 'Denetimde') {
+    if (status === 'beklemede' || status === 'incelemede' || status === 'İncelemede' || status === 'ilk_inceleme' || status === 'İlk İnceleme') {
       return 'inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     }
     if (status === 'onaylandi' || status === 'Onaylandı') {
@@ -148,7 +168,7 @@ function DashboardPage() {
     if (status === 'beklemede' || status === 'incelemede') return 'İncelemede';
     if (status === 'onaylandi') return 'Onaylandı';
     if (status === 'revizyon') return 'Revizyon';
-    if (status === 'ilk_inceleme' || status === 'denetimde') return 'Denetimde';
+    if (status === 'ilk_inceleme') return 'İlk İnceleme';
     if (status === 'reddedildi') return 'Reddedildi';
     return status;
   };
@@ -161,7 +181,7 @@ function DashboardPage() {
 
   const farmApprovalStats = [
     { label: 'Yeni Başvuru', value: dashboardStats?.farmSummary?.newApplications ?? 0 },
-    { label: 'Denetimde', value: dashboardStats?.farmSummary?.inspections ?? 0 },
+    { label: 'İncelemede', value: dashboardStats?.farmSummary?.inReview ?? 0 },
     { label: 'Onaylanan', value: dashboardStats?.farmSummary?.approved ?? 0 },
   ];
 
@@ -357,7 +377,7 @@ function DashboardPage() {
                       <th className="px-4 py-3 text-left">Çiftlik</th>
                       <th className="px-4 py-3 text-left">Sahip</th>
                       <th className="px-4 py-3 text-left">Durum</th>
-                      <th className="px-4 py-3 text-left">Denetim Tarihi</th>
+                      <th className="px-4 py-3 text-left">Son Güncelleme</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light text-sm dark:divide-border-dark">

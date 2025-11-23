@@ -5,6 +5,5 @@ export const activityFilters: ActivityFilterOption[] = [
   { value: 'kayit', label: 'Kayıt' },
   { value: 'guncelleme', label: 'Güncelleme' },
   { value: 'onay', label: 'Onay' },
-  { value: 'denetim', label: 'Denetim' },
 ];
 

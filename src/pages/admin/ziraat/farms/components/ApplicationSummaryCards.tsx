@@ -29,16 +29,16 @@ function ApplicationSummaryCards({ applications }: ApplicationSummaryCardsProps)
   };
 
   const pendingCount = stats?.newApplications || applications.filter(
-    (farm) => farm.status === 'İlk İnceleme' || farm.status === 'Denetimde',
+    (farm) => farm.status === 'İlk İnceleme',
   ).length;
   const approvedCount = stats?.approved || applications.filter((farm) => farm.status === 'Onaylandı').length;
-  const missingDocumentsCount = stats?.inspections || applications.filter((farm) => farm.status === 'Evrak Bekliyor').length;
+  const missingDocumentsCount = applications.filter((farm) => farm.status === 'Evrak Bekliyor').length;
 
   const cards = [
     {
       label: 'Bekleyen Başvurular',
       value: pendingCount,
-      description: 'Başlangıç veya denetim sürecindeki tüm başvurular',
+      description: 'İlk inceleme bekleyen başvurular',
     },
     {
       label: 'Onaylanan Çiftlikler',
@@ -46,9 +46,9 @@ function ApplicationSummaryCards({ applications }: ApplicationSummaryCardsProps)
       description: 'Toplam onaylanan çiftlik sayısı',
     },
     {
-      label: 'Denetim Sürecinde',
+      label: 'Evrak Bekliyor',
       value: missingDocumentsCount,
-      description: 'Denetim sürecindeki başvurular',
+      description: 'Evrak eksikliği nedeniyle bekleyen başvurular',
     },
   ];
 

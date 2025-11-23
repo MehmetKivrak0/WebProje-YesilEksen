@@ -5,10 +5,9 @@ export const initialFarmApplications: FarmApplication[] = [
     farm: 'Lale Bahçesi',
     owner: 'Hilal Karaca',
     location: 'Konya, Meram',
-    status: 'Denetimde',
-    inspectionDate: '2024-02-12',
+    status: 'İlk İnceleme',
     lastUpdate: 'Bugün',
-    notes: 'Saha ziyareti tamamlandı, rapor hazırlanıyor.',
+    notes: 'İlk inceleme tamamlandı, rapor hazırlanıyor.',
     contact: {
       name: 'Hilal Karaca',
       phone: '+90 536 111 22 33',
@@ -26,7 +25,6 @@ export const initialFarmApplications: FarmApplication[] = [
     owner: 'Yağız Yıldırım',
     location: 'Antalya, Manavgat',
     status: 'Onaylandı',
-    inspectionDate: '2024-02-08',
     lastUpdate: '2 gün önce',
     notes: 'Onay belgesi iletildi.',
     contact: {
@@ -47,7 +45,6 @@ export const initialFarmApplications: FarmApplication[] = [
     owner: 'Selim Demirtaş',
     location: 'Sakarya, Pamukova',
     status: 'Evrak Bekliyor',
-    inspectionDate: 'Bekleniyor',
     lastUpdate: '3 gün önce',
     notes: 'Analiz raporu eksik.',
     contact: {
@@ -67,7 +64,6 @@ export const initialFarmApplications: FarmApplication[] = [
     owner: 'Nisa Güler',
     location: 'Kütahya, Gediz',
     status: 'İlk İnceleme',
-    inspectionDate: '2024-02-18',
     lastUpdate: '5 saat önce',
     notes: 'İlk değerlendirme formu tamamlandı.',
     contact: {
@@ -87,7 +83,6 @@ export const initialFarmApplications: FarmApplication[] = [
     owner: 'Saim Bulut',
     location: 'Balıkesir, Gönen',
     status: 'Onaylandı',
-    inspectionDate: '2024-01-28',
     lastUpdate: 'Geçen hafta',
     notes: 'Yeni sezon üretim planı onaylandı.',
     contact: {

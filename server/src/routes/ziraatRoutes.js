@@ -23,6 +23,7 @@ router.use(checkRole('ziraat_yoneticisi'));
 router.get('/dashboard/stats', getDashboardStats);
 router.get('/products/applications', getProductApplications);
 router.get('/farms/applications', getFarmApplications);
+router.get('/farms/logs/all', getAllFarmLogs);
 router.post('/products/approve/:id', approveProduct);
 router.post('/products/reject/:id', rejectProduct);
 router.post('/farms/approve/:id', approveFarm);
@@ -31,7 +32,6 @@ router.get('/farmers/registered', getRegisteredFarmers);
 router.get('/dashboard/products', getDashboardProducts);
 router.get('/activity-log', getActivityLog);
 router.get('/farms/:id/logs', getFarmLogs);
-router.get('/farms/logs/all', getAllFarmLogs);
 router.put('/documents/:belgeId', updateDocumentStatus);
 
 module.exports = router;

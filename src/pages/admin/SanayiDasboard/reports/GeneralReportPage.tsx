@@ -47,13 +47,13 @@ function GeneralReportPage() {
   ];
 
   const highRiskCompanies = [
-    { name: 'Eko Enerji A.Ş.', contact: 'info@ekoenerji.com', riskScore: 7.8, issues: ['Eksik belgeler', 'Denetim gecikmesi'] },
+    { name: 'Eko Enerji A.Ş.', contact: 'info@ekoenerji.com', riskScore: 7.8, issues: ['Eksik belgeler', 'İnceleme gecikmesi'] },
     { name: 'Anadolu Kimya Ltd.', contact: 'iletisim@anadolukimya.com', riskScore: 7.2, issues: ['Eksik evraklar'] },
     { name: 'BioTarımsal Çözümler', contact: 'destek@biotarim.com', riskScore: 6.9, issues: ['Son güncelleme gecikmesi'] },
   ];
 
   const delayedApprovals = [
-    { applicationNumber: 'P-2001', company: 'Eko Enerji A.Ş.', daysDelayed: 10, status: 'Denetimde' },
+    { applicationNumber: 'P-2001', company: 'Eko Enerji A.Ş.', daysDelayed: 10, status: 'İncelemede' },
     { applicationNumber: 'P-2024', company: 'Anadolu Kimya Ltd.', daysDelayed: 7, status: 'İncelemede' },
     { applicationNumber: 'P-2003', company: 'BioTarımsal Çözümler', daysDelayed: 12, status: 'Evrak Bekliyor' },
   ];

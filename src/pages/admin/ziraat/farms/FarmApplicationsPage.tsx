@@ -5,8 +5,9 @@ import ApplicationSummaryCards from './components/ApplicationSummaryCards';
 import ApplicationTable from './components/ApplicationTable';
 import InspectModal from './components/modals/InspectModal';
 import RejectModal from './components/modals/RejectModal';
+import PreviewApprovalModal from './components/modals/PreviewApprovalModal';
 import FarmLogModal from './components/modals/FarmLogModal';
-import type { FarmApplication } from './types';
+import FarmToast from './components/FarmToast';
 import { useFarmApplications } from './hooks/useFarmApplications';
 
 function FarmApplicationsPage() {
@@ -19,9 +20,11 @@ function FarmApplicationsPage() {
     setInspectedApplication,
     rejectedApplication,
     setRejectedApplication,
+    previewApplication,
+    setPreviewApplication,
     rejectReason,
     setRejectReason,
-    documentReviews,
+    getDocumentReviews,
     updateDocumentStatus,
     updateDocumentReason,
     updateDocumentAdminNote,
@@ -31,6 +34,11 @@ function FarmApplicationsPage() {
     handleReject,
     loading,
     error,
+    approvingId,
+    rejectingId,
+    toast,
+    setToast,
+    loadApplications,
   } = useFarmApplications();
 
   const handleRejectSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -56,7 +64,7 @@ function FarmApplicationsPage() {
             <div>
               <h1 className="mb-2 text-4xl font-bold text-content-light dark:text-content-dark">Çiftlik Onay Süreçleri</h1>
               <p className="text-lg text-subtle-light dark:text-subtle-dark">
-                Yeni kayıt taleplerini, denetim süreçlerini ve sonuçlarını burada yönetin.
+                Yeni kayıt taleplerini ve sonuçlarını burada yönetin.
               </p>
             </div>
             <ApplicationFilters 
@@ -82,10 +90,6 @@ function FarmApplicationsPage() {
                   {loading ? 'Yükleniyor...' : `Filtreye göre görüntülenen ${filteredApplications.length} kayıt`}
                 </p>
               </div>
-              <button className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-primary/40 dark:hover:bg-primary/30">
-                <span className="material-symbols-outlined text-base">event</span>
-                Denetim Planı Oluştur
-              </button>
             </div>
 
             {loading ? (
@@ -97,7 +101,7 @@ function FarmApplicationsPage() {
                 applications={filteredApplications}
                 onInspect={setInspectedApplication}
                 onReject={setRejectedApplication}
-                onApprove={handleApprove}
+                rejectingId={rejectingId}
               />
             )}
           </div>
@@ -107,12 +111,21 @@ function FarmApplicationsPage() {
       {inspectedApplication && (
         <InspectModal
           application={inspectedApplication}
-          documentReviews={documentReviews}
+          documentReviews={getDocumentReviews(inspectedApplication.id)}
           onClose={closeInspectModal}
           onUpdateDocumentStatus={updateDocumentStatus}
           onUpdateDocumentReason={updateDocumentReason}
           onUpdateDocumentAdminNote={updateDocumentAdminNote}
-          onApprove={handleApproveClick}
+          onApprove={(application) => {
+            // Önce tüm reason ve admin note'ları kaydet (zaten yapılıyor InspectModal'da)
+            // InspectModal'ı kapat
+            setInspectedApplication(null);
+            // Sonra ön izleme modal'ını aç
+            setPreviewApplication(application);
+          }}
+          isApproving={approvingId === inspectedApplication.id}
+          onDataUpdated={loadApplications}
+          onShowToast={(message, tone) => setToast({ message, tone })}
         />
       )}
 
@@ -129,11 +142,32 @@ function FarmApplicationsPage() {
         />
       )}
 
+      {previewApplication && (
+        <PreviewApprovalModal
+          application={previewApplication}
+          documentReviews={getDocumentReviews(previewApplication.id)}
+          onClose={() => {
+            setPreviewApplication(null);
+            // Eğer inspect modal açıksa onu da kapat
+            if (inspectedApplication?.id === previewApplication.id) {
+              setInspectedApplication(null);
+            }
+          }}
+          onConfirm={async () => {
+            await handleApprove(previewApplication);
+            setPreviewApplication(null);
+          }}
+          isProcessing={approvingId === previewApplication.id}
+        />
+      )}
+
       {showAllLogs && (
         <FarmLogModal
           onClose={() => setShowAllLogs(false)}
         />
       )}
+
+      <FarmToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

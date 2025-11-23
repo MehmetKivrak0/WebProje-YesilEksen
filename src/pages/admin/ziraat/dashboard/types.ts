@@ -1,4 +1,4 @@
-export type ActivityType = 'kayit' | 'guncelleme' | 'onay' | 'denetim';
+export type ActivityType = 'kayit' | 'guncelleme' | 'onay';
 
 export type Activity = {
   id: string;
@@ -54,7 +54,7 @@ export type ProductSummary = {
 
 export type FarmSummary = {
   newApplications: number;
-  inspections: number;
+  inReview: number;
   approved: number;
 };
 

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { DocumentReviewState, FarmApplication } from '../../types';
 import FarmStatusBadge from '../FarmStatusBadge';
+import { ziraatService } from '../../../../../../services/ziraatService';
 
 type InspectModalProps = {
   application: FarmApplication;
@@ -10,6 +11,9 @@ type InspectModalProps = {
   onUpdateDocumentReason: (name: string, reason: string) => void;
   onUpdateDocumentAdminNote: (name: string, adminNote: string) => void;
   onApprove: (application: FarmApplication) => void;
+  isApproving?: boolean;
+  onDataUpdated?: () => void;
+  onShowToast?: (message: string, tone: 'success' | 'error') => void;
 };
 
 function InspectModal({
@@ -20,11 +24,51 @@ function InspectModal({
   onUpdateDocumentReason,
   onUpdateDocumentAdminNote,
   onApprove,
+  isApproving = false,
+  onDataUpdated,
+  onShowToast,
 }: InspectModalProps) {
   const [viewingDocument, setViewingDocument] = useState<{ url: string; name: string } | null>(null);
   const [documentBlobUrl, setDocumentBlobUrl] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState(false);
   const [documentLoading, setDocumentLoading] = useState(false);
+  const reasonTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const [shouldScrollToReason, setShouldScrollToReason] = useState<{ documentName: string } | null>(null);
+  // Local state for textarea values to avoid re-renders on every keystroke
+  const [localReasons, setLocalReasons] = useState<Record<string, string>>({});
+  const [localAdminNotes, setLocalAdminNotes] = useState<Record<string, string>>({});
+  // Track which documents have been saved
+  const [savedDocuments, setSavedDocuments] = useState<Set<string>>(new Set());
+  // Track which documents are being saved to backend
+  const [savingDocuments, setSavingDocuments] = useState<Set<string>>(new Set());
+
+  // Değişiklik var mı kontrol et
+  const hasChanges = () => {
+    for (const doc of application.documents) {
+      const review = documentReviews[doc.name];
+      if (!review) continue;
+
+      // Status değişmiş mi?
+      if (review.status !== doc.status) {
+        return true;
+      }
+
+      // Reason değişmiş mi?
+      const currentReason = review.reason || '';
+      const originalReason = doc.farmerNote || '';
+      if (currentReason !== originalReason) {
+        return true;
+      }
+
+      // AdminNote değişmiş mi?
+      const currentAdminNote = review.adminNote || '';
+      const originalAdminNote = doc.adminNote || '';
+      if (currentAdminNote !== originalAdminNote) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   const handleViewDocument = async (url: string, name: string) => {
     setViewingDocument({ url, name });
@@ -64,6 +108,40 @@ function InspectModal({
       setDocumentLoading(false);
     }
   };
+
+  // Local state'i documentReviews ile senkronize et
+  useEffect(() => {
+    const newLocalReasons: Record<string, string> = {};
+    const newLocalAdminNotes: Record<string, string> = {};
+    
+    application.documents.forEach((doc) => {
+      const review = documentReviews[doc.name];
+      if (review) {
+        newLocalReasons[doc.name] = review.reason ?? '';
+        newLocalAdminNotes[doc.name] = review.adminNote ?? '';
+      }
+    });
+    
+    setLocalReasons(newLocalReasons);
+    setLocalAdminNotes(newLocalAdminNotes);
+  }, [application.documents, documentReviews]);
+
+  // Eğer onay işlemi başarılı olursa ve modal kapanırsa, ön izleme modal'ını da kapat
+  // (onApprove başarılı olursa zaten setInspectedApplication(null) çağrılacak ve InspectModal kapanacak)
+
+  // Reason textarea'sına scroll yap
+  useEffect(() => {
+    if (shouldScrollToReason) {
+      const textarea = reasonTextareaRefs.current[shouldScrollToReason.documentName];
+      if (textarea) {
+        setTimeout(() => {
+          textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          textarea.focus();
+          setShouldScrollToReason(null);
+        }, 100);
+      }
+    }
+  }, [shouldScrollToReason]);
 
   const handleDownloadDocument = async (url: string, name: string) => {
     try {
@@ -120,7 +198,7 @@ function InspectModal({
           <div>
             <h2 className="text-2xl font-semibold text-content-light dark:text-content-dark">{application.farm}</h2>
             <p className="text-sm text-subtle-light dark:text-subtle-dark">
-              Sahibi: {application.owner} • Denetim: {application.inspectionDate}
+              Sahibi: {application.owner}
             </p>
           </div>
 
@@ -335,30 +413,67 @@ function InspectModal({
                         )}
                         
                         <div className="ml-auto flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onUpdateDocumentStatus(document.name, 'Onaylandı')}
-                            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                              review.status === 'Onaylandı'
-                                ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'
-                                : 'bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700'
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-base">check_circle</span>
-                            <span>Onayla</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onUpdateDocumentStatus(document.name, 'Reddedildi')}
-                            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
-                              review.status === 'Reddedildi'
-                                ? 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
-                                : 'border-2 border-red-500 bg-white text-red-600 hover:bg-red-50 dark:border-red-500 dark:bg-background-dark dark:text-red-400 dark:hover:bg-red-900/20'
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-base">cancel</span>
-                            <span>Reddet</span>
-                          </button>
+                          {(() => {
+                            const isDocumentUpdating = false; // Artık belge güncellemeleri direkt backend'e gönderilmiyor
+                            const isApproved = review.status === 'Onaylandı';
+                            const isRejected = review.status === 'Reddedildi';
+                            
+                            return (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => onUpdateDocumentStatus(document.name, 'Onaylandı')}
+                                  disabled={isDocumentUpdating || isApproved || isApproving}
+                                  className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    isApproved
+                                      ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'
+                                      : 'bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700'
+                                  }`}
+                                >
+                                  {isDocumentUpdating && !isApproved ? (
+                                    <>
+                                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                                      <span>Onaylanıyor...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="material-symbols-outlined text-base">check_circle</span>
+                                      <span>{isApproved ? 'Onaylandı' : 'Onayla'}</span>
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // Reason kontrolü - eğer reason yoksa scroll yap
+                                    const currentReason = documentReviews[document.name]?.reason;
+                                    if (!currentReason || !currentReason.trim()) {
+                                      setShouldScrollToReason({ documentName: document.name });
+                                    }
+                                    onUpdateDocumentStatus(document.name, 'Reddedildi');
+                                  }}
+                                  disabled={isDocumentUpdating || isRejected || isApproving}
+                                  className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    isRejected
+                                      ? 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
+                                      : 'border-2 border-red-500 bg-white text-red-600 hover:bg-red-50 dark:border-red-500 dark:bg-background-dark dark:text-red-400 dark:hover:bg-red-900/20'
+                                  }`}
+                                >
+                                  {isDocumentUpdating && !isRejected ? (
+                                    <>
+                                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent"></span>
+                                      <span>Reddediliyor...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="material-symbols-outlined text-base">cancel</span>
+                                      <span>{isRejected ? 'Reddedildi' : 'Reddet'}</span>
+                                    </>
+                                  )}
+                                </button>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -371,11 +486,28 @@ function InspectModal({
                                 Çiftçiye iletilecek açıklama
                               </span>
                               <textarea
-                                className="w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-content-light placeholder:text-subtle-light focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 dark:border-red-700 dark:bg-background-dark dark:text-content-dark dark:placeholder:text-subtle-dark"
+                                ref={(el) => {
+                                  reasonTextareaRefs.current[document.name] = el;
+                                }}
+                                className="w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-content-light placeholder:text-subtle-light focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 dark:border-red-700 dark:bg-background-dark dark:text-content-dark dark:placeholder:text-subtle-dark disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="Belgenin reddedilme gerekçesini ve yapılması gerekenleri belirtin."
-                                value={review.reason ?? ''}
-                                onChange={(event) => onUpdateDocumentReason(document.name, event.target.value)}
+                                value={localReasons[document.name] ?? ''}
+                                onChange={(event) => {
+                                  setLocalReasons((prev) => ({
+                                    ...prev,
+                                    [document.name]: event.target.value,
+                                  }));
+                                  // Eğer daha önce kaydedilmişse, değişiklik yapıldığı için kaydedildi durumunu kaldır
+                                  if (savedDocuments.has(document.name)) {
+                                    setSavedDocuments((prev) => {
+                                      const newSet = new Set(prev);
+                                      newSet.delete(document.name);
+                                      return newSet;
+                                    });
+                                  }
+                                }}
                                 rows={3}
+                                disabled={isApproving}
                               />
                             </label>
                             <label className="flex flex-col gap-2">
@@ -383,155 +515,236 @@ function InspectModal({
                                 Admin İç Notu (Çiftçiye gösterilmez)
                               </span>
                               <textarea
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-content-light placeholder:text-subtle-light focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500/50 dark:border-gray-600 dark:bg-background-dark dark:text-content-dark dark:placeholder:text-subtle-dark"
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-content-light placeholder:text-subtle-light focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500/50 dark:border-gray-600 dark:bg-background-dark dark:text-content-dark dark:placeholder:text-subtle-dark disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="Bu not sadece adminler tarafından görülebilir."
-                                value={review.adminNote ?? ''}
-                                onChange={(event) => onUpdateDocumentAdminNote(document.name, event.target.value)}
+                                value={localAdminNotes[document.name] ?? ''}
+                                onChange={(event) => {
+                                  setLocalAdminNotes((prev) => ({
+                                    ...prev,
+                                    [document.name]: event.target.value,
+                                  }));
+                                  // Eğer daha önce kaydedilmişse, değişiklik yapıldığı için kaydedildi durumunu kaldır
+                                  if (savedDocuments.has(document.name)) {
+                                    setSavedDocuments((prev) => {
+                                      const newSet = new Set(prev);
+                                      newSet.delete(document.name);
+                                      return newSet;
+                                    });
+                                  }
+                                }}
                                 rows={3}
+                                disabled={isApproving}
                               />
                             </label>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              onClick={() =>
-                                onUpdateDocumentReason(
-                                  document.name,
-                                  `Sayın çiftçimiz,
+                              onClick={() => {
+                                setLocalReasons((prev) => ({
+                                  ...prev,
+                                  [document.name]: `Sayın çiftçimiz,
 
-${document.name} belgeniz incelendi. Denetim sırasında belirtilen eksiklikler belgede görülmektedir. Lütfen eksiklikleri gidererek belgeyi güncelleyip sisteme yeniden yükleyiniz.
+${document.name} belgeniz incelendi. İnceleme sırasında belirtilen eksiklikler belgede görülmektedir. Lütfen eksiklikleri gidererek belgeyi güncelleyip sisteme yeniden yükleyiniz.
 
 Eksikliklerin giderilmesinin ardından belgenizi tekrar yükleyebilirsiniz. Herhangi bir sorunuz olması durumunda bizimle iletişime geçebilirsiniz.
 
 Saygılarımızla,
-Ziraat Odası Denetim Birimi`,
-                                )
-                              }
+Ziraat Odası İnceleme Birimi`,
+                                }));
+                              }}
                               className="rounded-lg border border-red-400 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-600 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-600"
                             >
-                              Denetim Eksikleri
+                              İnceleme Eksikleri
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                onUpdateDocumentReason(
-                                  document.name,
-                                  `Sayın çiftçimiz,
+                              onClick={() => {
+                                setLocalReasons((prev) => ({
+                                  ...prev,
+                                  [document.name]: `Sayın çiftçimiz,
 
 ${document.name} belgenizde yetkili imza ve/veya resmi mühür (kaşe) bulunmamaktadır. Belgenizin geçerliliği için yetkili kişi tarafından imzalanmış ve resmi mühür ile onaylanmış olması gerekmektedir.
 
 Lütfen belgenizi yetkili imza ve mühür ile onayladıktan sonra sisteme tekrar yükleyiniz.
 
 Saygılarımızla,
-Ziraat Odası Denetim Birimi`,
-                                )
-                              }
+Ziraat Odası İnceleme Birimi`,
+                                }));
+                              }}
                               className="rounded-lg border border-red-400 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-600 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-600"
                             >
                               İmza/Mühür Eksik
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                onUpdateDocumentReason(
-                                  document.name,
-                                  `Sayın çiftçimiz,
+                              onClick={() => {
+                                setLocalReasons((prev) => ({
+                                  ...prev,
+                                  [document.name]: `Sayın çiftçimiz,
 
 ${document.name} belgeniz format açısından uygun değildir. Belgelerin PDF formatında ve en fazla 10 MB boyutunda olması gerekmektedir.
 
 Lütfen belgenizi PDF formatına dönüştürüp dosya boyutunu kontrol ederek sisteme yeniden yükleyiniz. Dosya boyutu 10 MB'dan büyükse, belgenizi bölümler halinde veya daha düşük çözünürlükte yükleyebilirsiniz.
 
 Saygılarımızla,
-Ziraat Odası Denetim Birimi`,
-                                )
-                              }
+Ziraat Odası İnceleme Birimi`,
+                                }));
+                              }}
                               className="rounded-lg border border-red-400 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-600 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-600"
                             >
                               Format/Boyut Hatalı
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                onUpdateDocumentReason(
-                                  document.name,
-                                  `Sayın çiftçimiz,
+                              onClick={() => {
+                                setLocalReasons((prev) => ({
+                                  ...prev,
+                                  [document.name]: `Sayın çiftçimiz,
 
 ${document.name} belgenizde silik, bulanık veya okunaksız bölümler bulunmaktadır. Belgenin tamamının net ve okunabilir olması gerekmektedir.
 
 Lütfen belgenizin tüm sayfalarının net ve okunabilir olduğundan emin olarak yeniden tarayıp sisteme yükleyiniz. Tarama kalitesini yüksek (en az 300 DPI) olarak ayarlayınız.
 
 Saygılarımızla,
-Ziraat Odası Denetim Birimi`,
-                                )
-                              }
+Ziraat Odası İnceleme Birimi`,
+                                }));
+                              }}
                               className="rounded-lg border border-red-400 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-600 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-600"
                             >
                               Okunaksız Belge
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                onUpdateDocumentReason(
-                                  document.name,
-                                  `Sayın çiftçimiz,
+                              onClick={() => {
+                                setLocalReasons((prev) => ({
+                                  ...prev,
+                                  [document.name]: `Sayın çiftçimiz,
 
 ${document.name} belgeniz güncel değildir. Belgelerin son 3 ay içinde alınmış veya güncellenmiş olması gerekmektedir.
 
 Lütfen belgenizi güncel haliyle temin edip sisteme yeniden yükleyiniz. Eğer belgenin güncel olması durumunda tarih bilgisini belirtmeniz gerekiyorsa, belge üzerinde görünür olmasına dikkat ediniz.
 
 Saygılarımızla,
-Ziraat Odası Denetim Birimi`,
-                                )
-                              }
+Ziraat Odası İnceleme Birimi`,
+                                }));
+                              }}
                               className="rounded-lg border border-red-400 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-600 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-600"
                             >
                               Güncel Değil
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                onUpdateDocumentReason(
-                                  document.name,
-                                  `Sayın çiftçimiz,
+                              onClick={() => {
+                                setLocalReasons((prev) => ({
+                                  ...prev,
+                                  [document.name]: `Sayın çiftçimiz,
 
 ${document.name} belgeniz eksik veya tam sayfa içermemektedir. Belgenin tüm sayfalarının eksiksiz olarak yüklenmesi gerekmektedir.
 
 Lütfen belgenizin tüm sayfalarını içeren tam versiyonunu sisteme yeniden yükleyiniz. Çok sayfalı belgeler için tüm sayfaların tek bir PDF dosyası halinde birleştirilmesi gerekmektedir.
 
 Saygılarımızla,
-Ziraat Odası Denetim Birimi`,
-                                )
-                              }
+Ziraat Odası İnceleme Birimi`,
+                                }));
+                              }}
                               className="rounded-lg border border-red-400 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-600 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-600"
                             >
                               Eksik Sayfa
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                const reason = documentReviews[document.name]?.reason;
-                                if (reason) {
-                                  console.info(`İletildi: ${document.name} için mesaj -> ${reason}`);
+                              onClick={async () => {
+                                const reason = localReasons[document.name] ?? '';
+                                const adminNote = localAdminNotes[document.name] ?? '';
+                                
+                                if (reason.trim() && document.belgeId) {
+                                  // Reason'u sadece hafızada tut (local state'e kaydet)
+                                  onUpdateDocumentReason(document.name, reason);
+                                  
+                                  // Admin note varsa backend'e kaydet
+                                  if (adminNote.trim()) {
+                                    setSavingDocuments((prev) => new Set(prev).add(document.name));
+                                    
+                                    try {
+                                      const review = documentReviews[document.name];
+                                      const status = review?.status || 'Reddedildi';
+                                      
+                                      const response = await ziraatService.updateDocumentStatus(document.belgeId, {
+                                        status,
+                                        reason: reason.trim(),
+                                        adminNote: adminNote.trim(),
+                                      });
+                                      
+                                      if (response.success) {
+                                        // Admin note'u documentReviews'e kaydet
+                                        onUpdateDocumentAdminNote(document.name, adminNote);
+                                        // Kaydedildi olarak işaretle
+                                        setSavedDocuments((prev) => new Set(prev).add(document.name));
+                                        // Toast bildirimi göster
+                                        if (onShowToast) {
+                                          onShowToast('Admin notu eklendi', 'success');
+                                        }
+                                        // Verileri yenile
+                                        if (onDataUpdated) {
+                                          onDataUpdated();
+                                        }
+                                      } else {
+                                        if (onShowToast) {
+                                          onShowToast('Admin notu kaydedilemedi', 'error');
+                                        }
+                                      }
+                                    } catch (error) {
+                                      console.error('Belge kayıt hatası:', error);
+                                      if (onShowToast) {
+                                        onShowToast('Kayıt sırasında bir hata oluştu', 'error');
+                                      }
+                                    } finally {
+                                      setSavingDocuments((prev) => {
+                                        const newSet = new Set(prev);
+                                        newSet.delete(document.name);
+                                        return newSet;
+                                      });
+                                    }
+                                  } else {
+                                    // Sadece reason var, admin note yok - sadece hafızada tut
+                                    setSavedDocuments((prev) => new Set(prev).add(document.name));
+                                  }
                                 }
                               }}
-                              disabled={!documentReviews[document.name]?.reason}
+                              disabled={!localReasons[document.name]?.trim() || isApproving || savingDocuments.has(document.name)}
                               className={`ml-auto inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                                documentReviews[document.name]?.reason
+                                savedDocuments.has(document.name)
+                                  ? 'bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700'
+                                  : savingDocuments.has(document.name)
+                                  ? 'bg-yellow-500 text-white cursor-wait'
+                                  : localReasons[document.name]?.trim()
                                   ? 'bg-primary text-white hover:bg-primary/90 dark:bg-primary/80 dark:hover:bg-primary'
                                   : 'cursor-not-allowed border border-border-light bg-gray-100 text-gray-400 dark:border-border-dark dark:bg-gray-800 dark:text-gray-600'
                               }`}
                             >
-                              <span className="material-symbols-outlined text-sm">forward_to_inbox</span>
-                              İlet
+                              {savingDocuments.has(document.name) ? (
+                                <>
+                                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                                  <span>Kaydediliyor...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="material-symbols-outlined text-sm">
+                                    {savedDocuments.has(document.name) ? 'check_circle' : 'forward_to_inbox'}
+                                  </span>
+                                  {savedDocuments.has(document.name) ? 'Kaydedildi' : 'İlet'}
+                                </>
+                              )}
                             </button>
                           </div>
-                          {documentReviews[document.name]?.reason && (
+                          {localReasons[document.name] && (
                             <div className="rounded-lg bg-white/80 p-3 dark:bg-background-dark/50">
                               <p className="text-xs font-medium text-red-800 dark:text-red-200">
                                 Çiftçi panelinde gösterilecek açıklama:
                               </p>
                               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
-                                {documentReviews[document.name]?.reason}
+                                {localReasons[document.name]}
                               </p>
                             </div>
                           )}
@@ -553,16 +766,45 @@ Ziraat Odası Denetim Birimi`,
 
           <div className="flex items-center justify-end gap-3">
             <button
-              className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
+              className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={onClose}
+              disabled={isApproving}
             >
               Kapat
             </button>
             <button 
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
-              onClick={() => onApprove(application)}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              onClick={async () => {
+                // Tüm reason ve admin note'ları documentReviews'e kaydet
+                Object.keys(localReasons).forEach((docName) => {
+                  if (localReasons[docName]?.trim()) {
+                    onUpdateDocumentReason(docName, localReasons[docName]);
+                  }
+                });
+                Object.keys(localAdminNotes).forEach((docName) => {
+                  if (localAdminNotes[docName]?.trim()) {
+                    onUpdateDocumentAdminNote(docName, localAdminNotes[docName]);
+                  }
+                });
+                // State güncellemelerinin tamamlanması için kısa bir gecikme
+                await new Promise(resolve => setTimeout(resolve, 50));
+                // Ön izleme modal'ını açmak için onApprove'u çağır
+                // onApprove callback'i InspectModal'ı kapatacak ve ön izleme modal'ını açacak
+                onApprove(application);
+              }}
+              disabled={isApproving || application.status === 'Onaylandı' || !hasChanges()}
             >
-              Onayı Tamamla
+              {isApproving ? (
+                <>
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                  <span>Onaylanıyor...</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-base">check_circle</span>
+                  <span>Onayla</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -699,6 +941,7 @@ Ziraat Odası Denetim Birimi`,
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -46,13 +46,13 @@ function GeneralReportPage() {
   ];
 
   const highRiskFarms = [
-    { name: 'Lale Bahçesi', owner: 'Hilal Karaca', riskScore: 8.5, issues: ['Eksik belgeler', 'Denetim gecikmesi'] },
+    { name: 'Lale Bahçesi', owner: 'Hilal Karaca', riskScore: 8.5, issues: ['Eksik belgeler', 'İnceleme gecikmesi'] },
     { name: 'Pamukova Tarım', owner: 'Selim Demirtaş', riskScore: 7.8, issues: ['Eksik evraklar'] },
     { name: 'Yeşil Vadi', owner: 'Ayşe Yılmaz', riskScore: 7.2, issues: ['Son güncelleme gecikmesi'] },
   ];
 
   const delayedApprovals = [
-    { applicationNumber: 'C-2001', applicant: 'Lale Bahçesi', daysDelayed: 12, status: 'Denetimde' },
+    { applicationNumber: 'C-2001', applicant: 'Lale Bahçesi', daysDelayed: 12, status: 'İncelemede' },
     { applicationNumber: 'P-1024', applicant: 'Anadolu Tarım', daysDelayed: 8, status: 'İncelemede' },
     { applicationNumber: 'C-2003', applicant: 'Pamukova Tarım', daysDelayed: 15, status: 'Evrak Bekliyor' },
   ];

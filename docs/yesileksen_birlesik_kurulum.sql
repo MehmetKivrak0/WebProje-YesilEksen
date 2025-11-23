@@ -197,8 +197,6 @@ CREATE TABLE ciftlik_basvurulari (
     sahip_adi VARCHAR(200) NOT NULL,
     konum VARCHAR(255) NOT NULL,
     durum VARCHAR(50) DEFAULT 'ilk_inceleme',
-    denetim_tarihi DATE,
-    denetci_id UUID REFERENCES kullanicilar(id),
     notlar TEXT,
     red_nedeni TEXT,
     basvuru_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -271,8 +269,6 @@ CREATE TABLE firma_basvurulari (
     eposta VARCHAR(255),
     adres TEXT,
     aciklama TEXT,
-    denetim_tarihi DATE,
-    denetci_id UUID REFERENCES kullanicilar(id),
     notlar TEXT, -- Sanayi Odası'nın genel mesajı
     red_nedeni TEXT, -- Başvuru reddedilme nedeni
     basvuru_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -768,91 +764,7 @@ CREATE TABLE ayarlar (
 );
 
 -- =====================================================
--- 13. DENETİM SİSTEMİ
--- =====================================================
-
--- Denetim Kategorileri
-CREATE TABLE denetim_kategorileri (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    ad VARCHAR(200) NOT NULL,
-    aciklama TEXT,
-    uygulama_alani VARCHAR(50),
-    aktif BOOLEAN DEFAULT TRUE,
-    sira_no INTEGER,
-    olusturma TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Denetim Maddeleri
-CREATE TABLE denetim_maddeleri (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    kategori_id UUID NOT NULL REFERENCES denetim_kategorileri(id) ON DELETE CASCADE,
-    kod VARCHAR(50) UNIQUE NOT NULL,
-    ad VARCHAR(255) NOT NULL,
-    aciklama TEXT,
-    denetim_metodu TEXT,
-    beklenen_sonuc TEXT,
-    zorunlu BOOLEAN DEFAULT TRUE,
-    maks_puan DECIMAL(5, 2) NOT NULL DEFAULT 10.00,
-    min_puan DECIMAL(5, 2),
-    uygulama_alani VARCHAR(50),
-    mevzuat_ref TEXT,
-    aktif BOOLEAN DEFAULT TRUE,
-    sira_no INTEGER,
-    olusturma TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    guncelleme TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Denetimler
-CREATE TABLE denetimler (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    denetim_turu VARCHAR(50) NOT NULL,
-    basvuru_id UUID,
-    basvuru_tipi VARCHAR(50),
-    ciftlik_id UUID REFERENCES ciftlikler(id) ON DELETE CASCADE,
-    firma_id UUID REFERENCES firmalar(id) ON DELETE CASCADE,
-    denetci_id UUID NOT NULL REFERENCES kullanicilar(id),
-    denetim_tarihi DATE NOT NULL,
-    baslangic_saati TIME,
-    bitis_saati TIME,
-    sonuc VARCHAR(50) DEFAULT 'devam_ediyor',
-    toplam_puan DECIMAL(5, 2),
-    gecme_puani DECIMAL(5, 2) DEFAULT 70.00,
-    rapor TEXT,
-    olumlu_yonler TEXT,
-    olumsuz_yonler TEXT,
-    oneriler TEXT,
-    sonraki_denetim DATE,
-    duzeltme_gerekli BOOLEAN DEFAULT FALSE,
-    duzeltme_suresi INTEGER,
-    onaylayan_id UUID REFERENCES kullanicilar(id),
-    onay_tarihi TIMESTAMP,
-    olusturma TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    guncelleme TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_denetim_varlik CHECK (
-        (ciftlik_id IS NOT NULL AND firma_id IS NULL) OR
-        (ciftlik_id IS NULL AND firma_id IS NOT NULL)
-    )
-);
-
--- Denetim Sonuçları
-CREATE TABLE denetim_sonuclari (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    denetim_id UUID NOT NULL REFERENCES denetimler(id) ON DELETE CASCADE,
-    madde_id UUID NOT NULL REFERENCES denetim_maddeleri(id) ON DELETE CASCADE,
-    uygunluk VARCHAR(50),
-    alinan_puan DECIMAL(5, 2),
-    maks_puan DECIMAL(5, 2),
-    notlar TEXT,
-    kanitlar TEXT,
-    duzeltme_gerekli BOOLEAN DEFAULT FALSE,
-    duzeltme_tamamlandi BOOLEAN DEFAULT FALSE,
-    duzeltme_tarihi DATE,
-    olusturma TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(denetim_id, madde_id)
-);
-
--- =====================================================
--- 14. ODA ÜYELİKLERİ
+-- 13. ODA ÜYELİKLERİ
 -- =====================================================
 
 -- Oda Üyelikleri
@@ -929,10 +841,6 @@ CREATE INDEX IF NOT EXISTS idx_teklifler_urun ON teklifler(urun_id);
 CREATE INDEX IF NOT EXISTS idx_teklifler_firma ON teklifler(firma_id);
 CREATE INDEX IF NOT EXISTS idx_siparisler_no ON siparisler(siparis_no);
 CREATE INDEX IF NOT EXISTS idx_siparisler_durum ON siparisler(durum);
-CREATE INDEX IF NOT EXISTS idx_denetimler_ciftlik ON denetimler(ciftlik_id);
-CREATE INDEX IF NOT EXISTS idx_denetimler_firma ON denetimler(firma_id);
-CREATE INDEX IF NOT EXISTS idx_denetimler_denetci ON denetimler(denetci_id);
-CREATE INDEX IF NOT EXISTS idx_denetimler_tarih ON denetimler(denetim_tarihi);
 CREATE INDEX IF NOT EXISTS idx_bildirimler_kullanici ON bildirimler(kullanici_id);
 CREATE INDEX IF NOT EXISTS idx_bildirimler_okundu ON bildirimler(okundu);
 CREATE INDEX IF NOT EXISTS idx_oda_kullanicilari_kullanici_id ON oda_kullanicilari(kullanici_id);
@@ -959,8 +867,6 @@ CREATE TRIGGER trg_firmalar_guncelleme BEFORE UPDATE ON firmalar
 CREATE TRIGGER trg_urunler_guncelleme BEFORE UPDATE ON urunler
     FOR EACH ROW EXECUTE FUNCTION guncelleme_tarihi_func();
 CREATE TRIGGER trg_siparisler_guncelleme BEFORE UPDATE ON siparisler
-    FOR EACH ROW EXECUTE FUNCTION guncelleme_tarihi_func();
-CREATE TRIGGER trg_denetimler_guncelleme BEFORE UPDATE ON denetimler
     FOR EACH ROW EXECUTE FUNCTION guncelleme_tarihi_func();
 CREATE TRIGGER trg_oda_uyelikleri_guncelleme BEFORE UPDATE ON oda_uyelikleri
     FOR EACH ROW EXECUTE FUNCTION guncelleme_tarihi_func();

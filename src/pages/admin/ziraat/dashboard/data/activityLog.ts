@@ -22,12 +22,5 @@ export const activityLog: Activity[] = [
     timestamp: '6 saat önce',
     type: 'onay',
   },
-  {
-    id: 'activity-4',
-    title: 'Denetim raporu planlandı',
-    description: 'Lale Bahçesi için saha ziyareti ve raporlama takvimi oluşturuldu.',
-    timestamp: 'Dün',
-    type: 'denetim',
-  },
 ];
 

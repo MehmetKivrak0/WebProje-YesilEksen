@@ -1,6 +1,6 @@
 export type DocumentStatus = 'Onaylandı' | 'Eksik' | 'Beklemede' | 'Reddedildi';
 
-export type FarmStatus = 'Onaylandı' | 'Denetimde' | 'Evrak Bekliyor' | 'İlk İnceleme' | 'Aktif' | 'Beklemede' | 'Askıda';
+export type FarmStatus = 'Onaylandı' | 'Evrak Bekliyor' | 'İlk İnceleme' | 'Aktif' | 'Beklemede' | 'Askıda';
 
 export type FarmContact = {
   name: string;
@@ -23,7 +23,6 @@ export type FarmApplication = {
   owner: string;
   location: string;
   status: Exclude<FarmStatus, 'Aktif' | 'Beklemede' | 'Askıda'>;
-  inspectionDate: string;
   lastUpdate: string;
   notes: string;
   wasteTypes?: string[];

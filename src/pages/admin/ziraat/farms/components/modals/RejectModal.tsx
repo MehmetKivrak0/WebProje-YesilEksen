@@ -37,7 +37,7 @@ function RejectModal({ application, rejectReason, onChangeReason, onCancel, onSu
               required
               rows={4}
               className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-content-light focus:outline-none focus:ring-2 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-content-dark"
-              placeholder="Örneğin: Denetim raporunda belirtilen eksikler giderilmedi. Güncel raporu yükleyiniz..."
+              placeholder="Örneğin: Belirtilen eksikler giderilmedi. Güncel belgeleri yükleyiniz..."
               value={rejectReason}
               onChange={(event) => onChangeReason(event.target.value)}
             />
