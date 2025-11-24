@@ -209,15 +209,59 @@ export function useFarmApplications() {
   const closeInspectModal = () => setInspectedApplication(null);
 
   const updateDocumentStatus = async (name: string, status: DocumentReviewState[string]['status']) => {
-    if (!inspectedApplication) return;
+    console.log('📤 [UPDATE DOCUMENT STATUS] Başlatıldı:', {
+      belgAdi: name,
+      yeniDurum: status,
+      inspectedApplicationId: inspectedApplication?.id
+    });
+
+    if (!inspectedApplication) {
+      console.error('❌ [UPDATE DOCUMENT STATUS] İncelenen başvuru bulunamadı');
+      return;
+    }
     
     const applicationId = inspectedApplication.id;
     const currentReviews = getDocumentReviews(applicationId);
     
-    // Zaten aynı durumdaysa işlem yapma
+    // Belgeyi bul
     const document = inspectedApplication.documents.find(d => d.name === name);
-    const currentStatus = currentReviews[name]?.status || document?.status;
+    
+    if (!document) {
+      console.error('❌ [UPDATE DOCUMENT STATUS] Belge bulunamadı:', name);
+      setToast({
+        message: `${name} belgesi bulunamadı.`,
+        tone: 'error',
+      });
+      return;
+    }
+
+    console.log('📄 [UPDATE DOCUMENT STATUS] Belge bulundu:', {
+      ad: document.name,
+      belgeId: document.belgeId,
+      mevcutDurum: document.status,
+      url: document.url ? 'var' : 'yok'
+    });
+
+    // Belge ID'si kontrolü
+    if (!document.belgeId) {
+      console.error('❌ [UPDATE DOCUMENT STATUS] Belge ID bulunamadı:', {
+        belgAdi: name,
+        belge: document
+      });
+      setToast({
+        message: `${name} belgesi için belge ID bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.`,
+        tone: 'error',
+      });
+      return;
+    }
+    
+    // Zaten aynı durumdaysa işlem yapma
+    const currentStatus = currentReviews[name]?.status || document.status;
     if (currentStatus === status) {
+      console.warn('⚠️ [UPDATE DOCUMENT STATUS] Belge zaten aynı durumda:', {
+        belgAdi: name,
+        durum: status
+      });
       setToast({
         message: `${name} belgesi zaten ${status} durumunda.`,
         tone: 'error',
@@ -229,6 +273,7 @@ export function useFarmApplications() {
     if (status === 'Reddedildi') {
       const currentReason = currentReviews[name]?.reason;
       if (!currentReason || !currentReason.trim()) {
+        console.warn('⚠️ [UPDATE DOCUMENT STATUS] Red nedeni eksik, form gösteriliyor');
         // Önce status'u local state'te 'Reddedildi' yap ki reason formu görünsün
         updateDocumentReviews(applicationId, {
           ...currentReviews,
@@ -249,16 +294,11 @@ export function useFarmApplications() {
       }
     }
 
-    // Belge ID'si kontrolü
-    if (!document?.belgeId) {
-      setToast({
-        message: `${name} belgesi için belge ID bulunamadı.`,
-        tone: 'error',
-      });
-      return;
-    }
-
     // Loading state başlat
+    console.log('⏳ [UPDATE DOCUMENT STATUS] Backend isteği gönderiliyor...', {
+      belgeId: document.belgeId,
+      yeniDurum: status
+    });
     setUpdatingDocumentId(document.belgeId);
 
     try {
@@ -268,6 +308,8 @@ export function useFarmApplications() {
         reason: status === 'Reddedildi' ? currentReviews[name]?.reason : undefined,
         adminNote: currentReviews[name]?.adminNote,
       });
+
+      console.log('✅ [UPDATE DOCUMENT STATUS] Backend yanıtı:', response);
 
       if (response.success) {
         // Local state'i güncelle
@@ -296,18 +338,25 @@ export function useFarmApplications() {
         );
 
         const statusMessage = status === 'Onaylandı' ? 'onaylandı' : 'reddedildi';
+        console.log('🎉 [UPDATE DOCUMENT STATUS] İşlem başarılı:', statusMessage);
         setToast({
           message: `${name} belgesi başarıyla ${statusMessage}.`,
           tone: 'success',
         });
       } else {
+        console.error('❌ [UPDATE DOCUMENT STATUS] Backend hatası:', response.message);
         setToast({
           message: response.message || 'Belge güncellenemedi',
           tone: 'error',
         });
       }
     } catch (error: any) {
-      console.error('Belge güncelleme hatası:', error);
+      console.error('❌ [UPDATE DOCUMENT STATUS] İstek hatası:', error);
+      console.error('Hata detayları:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
       const errorMessage = error?.response?.data?.message || error?.message || 'Belge güncellenirken bir hata oluştu';
       setToast({
         message: errorMessage,

@@ -415,12 +415,61 @@ function InspectModal({
                             const isDocumentUpdating = document.belgeId ? updatingDocumentId === document.belgeId : false;
                             const isApproved = review.status === 'Onaylandı';
                             const isRejected = review.status === 'Reddedildi';
+                            const hasDocumentId = !!document.belgeId;
+                            const hasDocumentUrl = !!document.url;
+                            
+                            // Belge ID veya URL eksikse hata mesajı göster
+                            if (!hasDocumentId && !hasDocumentUrl) {
+                              return (
+                                <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                                  <span className="material-symbols-outlined text-sm">warning</span>
+                                  <span>Belge bilgisi eksik</span>
+                                </div>
+                              );
+                            }
+                            
+                            // Belge ID eksikse butonları disabled yap ve uyarı göster
+                            if (!hasDocumentId) {
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sm">warning</span>
+                                    <span>Belge ID eksik</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled={true}
+                                    title="Belge ID eksik olduğu için işlem yapılamıyor"
+                                    className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm bg-gray-400 cursor-not-allowed opacity-50"
+                                  >
+                                    <span className="material-symbols-outlined text-base">check_circle</span>
+                                    <span>Onayla</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={true}
+                                    title="Belge ID eksik olduğu için işlem yapılamıyor"
+                                    className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold border-2 border-gray-400 bg-white text-gray-400 cursor-not-allowed opacity-50"
+                                  >
+                                    <span className="material-symbols-outlined text-base">cancel</span>
+                                    <span>Reddet</span>
+                                  </button>
+                                </div>
+                              );
+                            }
                             
                             return (
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => onUpdateDocumentStatus(document.name, 'Onaylandı')}
+                                  onClick={() => {
+                                    console.log('🟢 Onayla butonu tıklandı:', {
+                                      belgeAdi: document.name,
+                                      belgeId: document.belgeId,
+                                      mevcutDurum: review.status
+                                    });
+                                    onUpdateDocumentStatus(document.name, 'Onaylandı');
+                                  }}
                                   disabled={isDocumentUpdating || isApproved || isApproving}
                                   className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                                     isApproved
@@ -443,6 +492,12 @@ function InspectModal({
                                 <button
                                   type="button"
                                   onClick={async () => {
+                                    console.log('🔴 Reddet butonu tıklandı:', {
+                                      belgeAdi: document.name,
+                                      belgeId: document.belgeId,
+                                      mevcutDurum: review.status,
+                                      redNedeni: documentReviews[document.name]?.reason
+                                    });
                                     // Reason kontrolü - eğer reason yoksa scroll yap
                                     const currentReason = documentReviews[document.name]?.reason;
                                     if (!currentReason || !currentReason.trim()) {
