@@ -6,7 +6,7 @@ type ApplicationFiltersProps = {
   onShowLogs?: () => void;
 };
 
-const statusOptions: Array<'Hepsi' | FarmStatus> = ['Hepsi', 'İlk İnceleme', 'Onaylandı', 'Evrak Bekliyor'];
+const statusOptions: Array<'Hepsi' | FarmStatus> = ['Hepsi', 'İlk İnceleme', 'Onaylandı', 'Belge Eksik', 'Evrak Bekliyor'];
 
 function ApplicationFilters({ selectedStatus, onStatusChange, onShowLogs }: ApplicationFiltersProps) {
   return (

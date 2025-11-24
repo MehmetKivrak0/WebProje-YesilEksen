@@ -9,10 +9,23 @@ export interface DashboardStats {
     farmSummary: {
         newApplications: number;
         inspections: number;
+        missingDocuments: number;
+        totalApplications: number;
         approved: number;
     };
     totalFarmers: number;
     totalProducts: number;
+}
+
+export interface ApproveFarmResponse {
+    success: boolean;
+    message: string;
+    status?: string;
+    missingDocuments?: Array<{
+        ad: string;
+        durum: string;
+        zorunlu?: boolean;
+    }>;
 }
 
 export interface ProductApplication {
@@ -97,7 +110,7 @@ export const ziraatService = {
         return response.data;
     },
     //Çiftlik Başvurusu Onayla
-    approveFarm: async (id: string, data?: { note?: string }): Promise<{ success: boolean; message: string }> => {
+    approveFarm: async (id: string, data?: { note?: string }): Promise<ApproveFarmResponse> => {
         // ID'yi temizle ve doğrula
         const cleanId = String(id).trim();
         if (!cleanId) {

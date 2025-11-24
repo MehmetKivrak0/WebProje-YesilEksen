@@ -29,18 +29,17 @@ function SummaryCards({ productSummary, farmSummary }: SummaryCardsProps) {
       <div className="rounded-xl border border-border-light bg-background-light p-6 dark:border-border-dark dark:bg-background-dark">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-subtle-light dark:text-subtle-dark">İncelemedeki Çiftlik</p>
+            <p className="text-sm text-subtle-light dark:text-subtle-dark">Bekleyen Çiftlik Başvurusu</p>
             <p className="text-3xl font-bold text-content-light dark:text-content-dark">
-              {farmSummary.newApplications + farmSummary.inspections}
+              {farmSummary.newApplications ?? 0}
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20">
-            <span className="material-symbols-outlined text-2xl text-primary">home</span>
+            <span className="material-symbols-outlined text-2xl text-primary">warning</span>
           </div>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-green-600 dark:text-green-400">%18 yükseliş</span>
-          <span className="text-sm text-subtle-light dark:text-subtle-dark"> geçen haftaya göre</span>
+          <span className="text-sm text-subtle-light dark:text-subtle-dark"> Sayısı</span>
         </div>
       </div>
 
@@ -65,7 +64,7 @@ function SummaryCards({ productSummary, farmSummary }: SummaryCardsProps) {
       <div className="rounded-xl border border-border-light bg-background-light p-6 dark:border-border-dark dark:bg-background-dark">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-subtle-light dark:text-subtle-dark">Bu Ay Onaylanan Çiftlik</p>
+            <p className="text-sm text-subtle-light dark:text-subtle-dark">Onaylanan Çiftlikler</p>
             <p className="text-3xl font-bold text-content-light dark:text-content-dark">
               {farmSummary.approved}
             </p>
@@ -75,8 +74,8 @@ function SummaryCards({ productSummary, farmSummary }: SummaryCardsProps) {
           </div>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-green-600 dark:text-green-400">%15 artış</span>
-          <span className="text-sm text-subtle-light dark:text-subtle-dark"> geçtiğimiz aya göre</span>
+          <span className="text-sm text-green-600 dark:text-green-400">Aktif çiftlik toplamı</span>
+          <span className="text-sm text-subtle-light dark:text-subtle-dark"> ciftlikler tablosu</span>
         </div>
       </div>
     </div>

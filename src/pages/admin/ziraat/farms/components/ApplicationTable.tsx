@@ -11,7 +11,14 @@ type ApplicationTableProps = {
   approvingId?: string | null;
 };
 
-function ApplicationTable({ applications, onInspect, onReject, onQuickApprove, rejectingId, approvingId }: ApplicationTableProps) {
+function ApplicationTable({
+  applications,
+  onInspect,
+  onReject,
+  onQuickApprove,
+  rejectingId,
+  approvingId,
+}: ApplicationTableProps) {
   const [selectedApplication, setSelectedApplication] = useState<FarmApplication | null>(null);
   return (
     <div className="overflow-x-auto">

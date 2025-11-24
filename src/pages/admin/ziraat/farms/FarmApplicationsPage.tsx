@@ -16,6 +16,8 @@ function FarmApplicationsPage() {
     selectedStatus,
     setSelectedStatus,
     applications,
+    allApplications,
+    approvedFarmCount,
     inspectedApplication,
     setInspectedApplication,
     rejectedApplication,
@@ -76,7 +78,10 @@ function FarmApplicationsPage() {
             </div>
           )}
 
-          <ApplicationSummaryCards applications={applications} />
+          <ApplicationSummaryCards 
+            applications={allApplications || applications} 
+            approvedFarmCount={approvedFarmCount}
+          />
 
           <div className="rounded-xl border border-border-light bg-background-light dark:border-border-dark dark:bg-background-dark">
             <div className="flex flex-col gap-4 border-b border-border-light px-6 py-4 dark:border-border-dark md:flex-row md:items-center md:justify-between">

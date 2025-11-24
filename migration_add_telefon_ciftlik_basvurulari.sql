@@ -26,3 +26,5 @@ COMMENT ON COLUMN ciftlik_basvurulari.telefon IS 'Başvuruya özel telefon numar
 
 
 
+
+

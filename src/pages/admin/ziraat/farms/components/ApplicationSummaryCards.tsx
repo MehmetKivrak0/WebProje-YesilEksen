@@ -1,44 +1,25 @@
-import { useEffect, useState, useMemo } from 'react';
-import { ziraatService } from '../../../../../services/ziraatService';
+import { useMemo } from 'react';
 import type { FarmApplication } from '../types';
 
 type ApplicationSummaryCardsProps = {
   applications: FarmApplication[];
+  approvedFarmCount: number;
 };
 
-function ApplicationSummaryCards({ applications }: ApplicationSummaryCardsProps) {
-  const [stats, setStats] = useState<{
-    newApplications: number;
-    inspections: number;
-    approved: number;
-  } | null>(null);
+function ApplicationSummaryCards({ applications, approvedFarmCount }: ApplicationSummaryCardsProps) {
+  const { pendingCount, approvedCount, missingDocumentsCount } = useMemo(() => {
+    const pending = applications.filter((farm) => farm.status === 'İlk İnceleme').length;
+    const approved = applications.filter((farm) => farm.status === 'Onaylandı').length;
+    const missing = applications.filter(
+      (farm) => farm.status === 'Belge Eksik' || farm.status === 'Evrak Bekliyor',
+    ).length;
 
-  // Applications değiştiğinde stats'i yeniden yükle
-  // Sadece uzunluk ve status değişikliklerini izle (gereksiz API çağrılarını önlemek için)
-  const applicationsKey = useMemo(() => {
-    return `${applications.length}-${applications.map(a => `${a.id}:${a.status}`).join(',')}`;
+    return {
+      pendingCount: pending,
+      approvedCount: approved,
+      missingDocumentsCount: missing,
+    };
   }, [applications]);
-
-  useEffect(() => {
-    loadStats();
-  }, [applicationsKey]);
-
-  const loadStats = async () => {
-    try {
-      const response = await ziraatService.getDashboardStats();
-      if (response.success) {
-        setStats(response.stats.farmSummary);
-      }
-    } catch (error) {
-      console.error('Stats yükleme hatası:', error);
-    }
-  };
-
-  const pendingCount = stats?.newApplications || applications.filter(
-    (farm) => farm.status === 'İlk İnceleme',
-  ).length;
-  const approvedCount = stats?.approved || applications.filter((farm) => farm.status === 'Onaylandı').length;
-  const missingDocumentsCount = applications.filter((farm) => farm.status === 'Evrak Bekliyor').length;
 
   const cards = [
     {
@@ -48,13 +29,15 @@ function ApplicationSummaryCards({ applications }: ApplicationSummaryCardsProps)
     },
     {
       label: 'Onaylanan Çiftlikler',
-      value: approvedCount,
-      description: 'Toplam onaylanan çiftlik sayısı',
+      value: approvedFarmCount || approvedCount,
+      description: approvedFarmCount
+        ? 'Aktif çiftlikler (ciftlikler tablosu)'
+        : 'Toplam onaylanan çiftlik sayısı',
     },
     {
-      label: 'Evrak Bekliyor',
+      label: 'Belge Eksik',
       value: missingDocumentsCount,
-      description: 'Evrak eksikliği nedeniyle bekleyen başvurular',
+      description: 'Belgesi eksik olan başvurular',
     },
   ];
 

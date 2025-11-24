@@ -18,7 +18,7 @@ const mapStatusFromBackend = (status: string): Exclude<FarmStatus, 'Aktif' | 'Be
     'denetimde': 'İlk İnceleme', // Denetimde durumu artık kullanılmıyor, İlk İnceleme'ye map ediliyor
     'onaylandi': 'Onaylandı',
     'reddedildi': 'Evrak Bekliyor',
-    'belge_eksik': 'Evrak Bekliyor', // Belge eksik durumu
+    'belge_eksik': 'Belge Eksik', // Belge eksik durumu
     'yeni': 'İlk İnceleme',
   };
   return statusMap[status.toLowerCase()] || 'İlk İnceleme';
@@ -73,6 +73,8 @@ const mapApiApplicationToFarmApplication = (apiApp: ApiFarmApplication): FarmApp
 export function useFarmApplications() {
   const [selectedStatus, setSelectedStatus] = useState<'Hepsi' | FarmStatus>('Hepsi');
   const [records, setRecords] = useState<FarmApplication[]>([]);
+  const [allApplications, setAllApplications] = useState<FarmApplication[]>([]); // İstatistikler için tüm başvurular
+  const [approvedFarmCount, setApprovedFarmCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inspectedApplication, setInspectedApplication] = useState<FarmApplication | null>(null);
@@ -92,6 +94,10 @@ export function useFarmApplications() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStatus]);
 
+  useEffect(() => {
+    loadApprovedFarmCount();
+  }, []);
+
   const loadApplications = async () => {
     try {
       setLoading(true);
@@ -101,13 +107,20 @@ export function useFarmApplications() {
       const statusParam = selectedStatus === 'Hepsi' ? undefined : 
         selectedStatus === 'İlk İnceleme' ? 'ilk_inceleme' :
         selectedStatus === 'Onaylandı' ? 'onaylandi' :
+        selectedStatus === 'Belge Eksik' ? 'belge_eksik' :
         selectedStatus === 'Evrak Bekliyor' ? 'reddedildi' : undefined;
 
       console.log('🔍 Farm applications yükleniyor:', { selectedStatus, statusParam });
 
+      // Filtrelenmiş veriyi yükle
       const response = await ziraatService.getFarmApplications({
         status: statusParam,
       });
+
+      // İstatistikler için tüm başvuruları yükle (filtre olmadan)
+      const allResponse = selectedStatus !== 'Hepsi' 
+        ? await ziraatService.getFarmApplications({})
+        : response;
 
       console.log('📥 API Response:', {
         success: response.success,
@@ -121,7 +134,20 @@ export function useFarmApplications() {
 
       if (response.success) {
         const mappedApplications = response.applications.map(mapApiApplicationToFarmApplication);
+        console.log('🔄 [LOAD APPLICATIONS] Başvurular map edildi:', {
+          count: mappedApplications.length,
+          statusDistribution: mappedApplications.reduce((acc, app) => {
+            acc[app.status] = (acc[app.status] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        });
         setRecords(mappedApplications);
+
+        // Tüm başvuruları istatistikler için kaydet
+        if (allResponse.success) {
+          const mappedAllApplications = allResponse.applications.map(mapApiApplicationToFarmApplication);
+          setAllApplications(mappedAllApplications);
+        }
       } else {
         setError('Başvurular yüklenemedi');
       }
@@ -130,6 +156,28 @@ export function useFarmApplications() {
       setError('Başvurular yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadApprovedFarmCount = async () => {
+    try {
+      const statsResponse = await ziraatService.getDashboardStats();
+      if (statsResponse.success) {
+        setApprovedFarmCount(statsResponse.stats?.farmSummary?.approved ?? 0);
+      }
+    } catch (err) {
+      console.error('Onaylı çiftlik sayısı yüklenemedi:', err);
+    }
+  };
+
+  const forceBelgeEksikStatus = async (applicationId: string, reason?: string) => {
+    try {
+      await ziraatService.updateFarmApplicationStatus(applicationId, {
+        status: 'belge_eksik',
+        reason: reason || 'Zorunlu belgeler henüz tamamlanmadı.',
+      });
+    } catch (err) {
+      console.error('Belge eksik durumunu zorla ayarlama hatası:', err);
     }
   };
 
@@ -322,27 +370,87 @@ export function useFarmApplications() {
           },
         });
 
-        // Belge durumunu application.documents'ta da güncelle
-        setRecords((prev) =>
-          prev.map((app) => {
-            if (app.id === applicationId) {
-              return {
-                ...app,
-                documents: app.documents.map((doc) =>
-                  doc.name === name ? { ...doc, status } : doc
-                ),
-              };
-            }
-            return app;
-          })
-        );
-
-        const statusMessage = status === 'Onaylandı' ? 'onaylandı' : 'reddedildi';
-        console.log('🎉 [UPDATE DOCUMENT STATUS] İşlem başarılı:', statusMessage);
-        setToast({
-          message: `${name} belgesi başarıyla ${statusMessage}.`,
-          tone: 'success',
-        });
+        // Eğer başvuru durumu değiştiyse güncelle
+        const applicationStatusChanged = (response as any).applicationStatusChanged;
+        const newApplicationStatus = (response as any).applicationStatus;
+        
+        if (applicationStatusChanged && newApplicationStatus) {
+          console.log('🔄 [UPDATE DOCUMENT STATUS] Başvuru durumu değişti:', newApplicationStatus);
+          
+          // Başvuru durumunu frontend formatına çevir
+          const frontendStatus = mapStatusFromBackend(newApplicationStatus);
+          
+          // Başvuru durumunu güncelle
+          setRecords((prev) =>
+            prev.map((app) => {
+              if (app.id === applicationId) {
+                return {
+                  ...app,
+                  status: frontendStatus,
+                  documents: app.documents.map((doc) =>
+                    doc.name === name ? { ...doc, status } : doc
+                  ),
+                };
+              }
+              return app;
+            })
+          );
+          
+          // allApplications'ı da güncelle
+          setAllApplications((prev) =>
+            prev.map((app) => {
+              if (app.id === applicationId) {
+                return {
+                  ...app,
+                  status: frontendStatus,
+                  documents: app.documents.map((doc) =>
+                    doc.name === name ? { ...doc, status } : doc
+                  ),
+                };
+              }
+              return app;
+            })
+          );
+          
+          // Inspected application'ı da güncelle
+          if (inspectedApplication && inspectedApplication.id === applicationId) {
+            setInspectedApplication({
+              ...inspectedApplication,
+              status: frontendStatus,
+              documents: inspectedApplication.documents.map((doc) =>
+                doc.name === name ? { ...doc, status } : doc
+              ),
+            });
+          }
+          
+          const statusMessage = status === 'Onaylandı' ? 'onaylandı' : status === 'Reddedildi' ? 'reddedildi' : 'güncellendi';
+          setToast({
+            message: `${name} belgesi başarıyla ${statusMessage}. Başvuru durumu "Belge Eksik" olarak güncellendi.`,
+            tone: 'error',
+          });
+        } else {
+          // Belge durumunu application.documents'ta da güncelle
+          setRecords((prev) =>
+            prev.map((app) => {
+              if (app.id === applicationId) {
+                return {
+                  ...app,
+                  documents: app.documents.map((doc) =>
+                    doc.name === name ? { ...doc, status } : doc
+                  ),
+                };
+              }
+              return app;
+            })
+          );
+          
+          const statusMessage = status === 'Onaylandı' ? 'onaylandı' : 'reddedildi';
+          console.log('🎉 [UPDATE DOCUMENT STATUS] İşlem başarılı:', statusMessage);
+          setToast({
+            message: `${name} belgesi başarıyla ${statusMessage}.`,
+            tone: 'success',
+          });
+        }
       } else {
         console.error('❌ [UPDATE DOCUMENT STATUS] Backend hatası:', response.message);
         setToast({
@@ -413,7 +521,13 @@ export function useFarmApplications() {
 
     for (const doc of documents) {
       const review = reviews[doc.name];
-      if (!review || !doc.belgeId) continue;
+      // belgeId kontrolü - null, undefined, boş string veya geçersiz format kontrolü
+      if (!review || !doc.belgeId || typeof doc.belgeId !== 'string' || doc.belgeId.trim() === '') {
+        if (!doc.belgeId) {
+          console.warn(`Belge "${doc.name}" için belgeId bulunamadı, güncelleme atlanıyor.`);
+        }
+        continue;
+      }
 
       const statusChanged = review.status !== doc.status;
       const hasReason = review.reason && review.reason.trim();
@@ -452,16 +566,80 @@ export function useFarmApplications() {
   ): Promise<void> => {
     if (updates.length === 0) return;
 
-    const promises = updates.map(({ belgeId, data }) =>
-      ziraatService.updateDocumentStatus(belgeId, data)
-    );
+    const promises = updates.map(async ({ belgeId, data }, index) => {
+      try {
+        const response = await ziraatService.updateDocumentStatus(belgeId, data);
+        
+        // Backend'den success: false dönerse hata olarak kabul et
+        if (!response.success) {
+          const errorMessage = response.message || 'Belge güncellenemedi';
+          console.error(`Belge güncelleme hatası (${belgeId}):`, errorMessage);
+          throw { belgeId, error: errorMessage, originalError: { response: { data: response } } };
+        }
+        
+        return response;
+      } catch (error: any) {
+        // Hata detaylarını daha anlaşılır hale getir
+        let errorMessage = 'Bilinmeyen hata';
+        
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+        
+        console.error(`Belge güncelleme hatası (${belgeId}):`, {
+          errorMessage,
+          status: error?.response?.status,
+          data: error?.response?.data,
+          originalError: error
+        });
+        
+        // Hatayı tekrar fırlat ki Promise.allSettled'da yakalanabilsin
+        throw { belgeId, error: errorMessage, originalError: error };
+      }
+    });
 
     const results = await Promise.allSettled(promises);
-    const failed = results.filter((r) => r.status === 'rejected');
+    const failed = results.filter((r) => r.status === 'rejected') as Array<{
+      status: 'rejected';
+      reason: { belgeId: string; error: string; originalError: any };
+    }>;
 
     if (failed.length > 0) {
-      console.error('Bazı belge güncellemeleri başarısız:', failed);
-      // Devam et, çünkü bazı belgeler güncellenmiş olabilir
+      const failedDetails = failed.map((f) => ({
+        belgeId: f.reason.belgeId,
+        error: f.reason.error,
+      }));
+      
+      // Kullanıcıya detaylı hata mesajı göster
+      const failedCount = failed.length;
+      const totalCount = updates.length;
+      const errorMessages = failedDetails.map(f => `Belge ${f.belgeId}: ${f.error}`).join('\n');
+      
+      // Hata mesajını daha yapılandırılmış şekilde logla
+      const errorInfo = {
+        message: `Bazı belge güncellemeleri başarısız oldu (${failedCount}/${totalCount})`,
+        failed: failedDetails,
+        total: totalCount,
+        successful: totalCount - failedCount
+      };
+      
+      if (failedCount === totalCount) {
+        // Tüm güncellemeler başarısız olduysa hata fırlat
+        console.error('[Belge Güncelleme Hatası]', errorInfo);
+        const errorMessage = failedDetails.length === 1 
+          ? `Belge güncellemesi başarısız oldu: Belge ${failedDetails[0].belgeId}: ${failedDetails[0].error}`
+          : `${failedCount} belge güncellemesi başarısız oldu:\n${errorMessages}`;
+        throw new Error(errorMessage);
+      } else {
+        // Bazı güncellemeler başarılı olduysa uyarı göster ama devam et
+        console.warn('[Belge Güncelleme Uyarısı]', errorInfo);
+      }
     }
   };
 
@@ -496,9 +674,62 @@ export function useFarmApplications() {
 
       // 1. Belge güncellemelerini hazırla ve gönder
       const documentUpdates = prepareDocumentUpdates(application.documents, applicationReviews);
-      await updateDocuments(documentUpdates);
+      if (documentUpdates.length > 0) {
+        try {
+          await updateDocuments(documentUpdates);
+        } catch (docError: any) {
+          // Belge güncelleme hatalarını yakala ve kullanıcıya göster
+          const errorMessage = docError?.message || 'Belge güncellemeleri sırasında bir hata oluştu';
+          console.error('Belge güncelleme hatası:', docError);
+          setError(errorMessage);
+          setToast({
+            message: errorMessage,
+            tone: 'error',
+          });
+          // Belge güncellemeleri başarısız olduysa işlemi durdur
+          setApprovingId(null);
+          return;
+        }
+      }
 
-      // 2. Çiftlik onayını yap
+      // 2. Belgeleri kontrol et - eksik belge var mı?
+      const { hasMissing, missingDocuments } = checkMissingDocuments(application, applicationReviews);
+      
+      if (hasMissing) {
+        // Eksik belge varsa durumu "belge_eksik" olarak kaydet
+        const missingMessage = `Zorunlu belgelerden eksik/reddedilmiş/beklemede olanlar: ${missingDocuments.join(', ')}. Başvuru "Belge Eksik" durumuna alındı.`;
+        
+        setToast({
+          message: missingMessage,
+          tone: 'error',
+        });
+
+        // Local state'i güncelle
+        setRecords((prev) =>
+          prev.map((app) => {
+            if (app.id === application.id) {
+              return { ...app, status: 'Belge Eksik' };
+            }
+            return app;
+          })
+        );
+        setAllApplications((prev) =>
+          prev.map((app) => {
+            if (app.id === application.id) {
+              return { ...app, status: 'Belge Eksik' };
+            }
+            return app;
+          })
+        );
+
+        // Veritabanına durumu kaydet
+        await forceBelgeEksikStatus(application.id, missingMessage);
+        await loadApplications();
+        cleanupAfterApproval(application.id);
+        return;
+      }
+
+      // 3. Çiftlik onayını yap (belgeler tamam ise)
       // ID'nin geçerli olduğundan emin ol
       if (!application.id || typeof application.id !== 'string') {
         throw new Error('Geçersiz başvuru ID\'si');
@@ -506,15 +737,65 @@ export function useFarmApplications() {
       
       const response = await ziraatService.approveFarm(application.id);
 
-      if (response.success) {
-        // Başarılı mesajı göster
+        if (response.success) {
+          if (response.status === 'belge_eksik') {
+            const missingMessage =
+              response.message ||
+              `${application.farm} çiftliğinin zorunlu belgeleri henüz tamamlanmadı. Başvuru "Belge Eksik" durumuna alındı.`;
+            setToast({
+              message: missingMessage,
+              tone: 'error',
+            });
+
+            setRecords((prev) =>
+              prev.map((app) => {
+                if (app.id === application.id) {
+                  return { ...app, status: 'Belge Eksik' };
+                }
+                return app;
+              })
+            );
+            setAllApplications((prev) =>
+              prev.map((app) => {
+                if (app.id === application.id) {
+                  return { ...app, status: 'Belge Eksik' };
+                }
+                return app;
+              })
+            );
+
+            await forceBelgeEksikStatus(application.id, missingMessage);
+            await loadApplications();
+            cleanupAfterApproval(application.id);
+            return;
+          }
+
+          // Başarılı mesajı göster
         setToast({
           message: `${application.farm} çiftliği ve belgeler başarıyla onaylandı.`,
           tone: 'success',
         });
 
-        // Listeyi yenile
+        // Önce local state'te başvurunun durumunu güncelle (anında UI güncellemesi için)
+        console.log(`🔄 [QUICK APPROVE] Local state güncelleniyor - ${application.id} -> Onaylandı`);
+        setRecords((prev) =>
+          prev.map((app) => {
+            if (app.id === application.id) {
+              console.log(`✅ [QUICK APPROVE] Başvuru bulundu ve güncellendi:`, {
+                id: app.id,
+                eskiDurum: app.status,
+                yeniDurum: 'Onaylandı'
+              });
+              return { ...app, status: 'Onaylandı' };
+            }
+            return app;
+          })
+        );
+
+        // Listeyi yenile (backend'den güncel veriyi çek)
+        console.log('🔄 [QUICK APPROVE] Backend\'den liste yenileniyor...');
         await loadApplications();
+        console.log('✅ [QUICK APPROVE] Liste yenileme tamamlandı');
 
         // State'i temizle (loadApplications sonrası records güncellenecek, useEffect inspectedApplication'ı güncelleyecek)
         cleanupAfterApproval(application.id);
@@ -543,7 +824,9 @@ export function useFarmApplications() {
   };
 
   // Zorunlu belgelerin durumunu kontrol et
-  const checkRequiredDocuments = (application: FarmApplication): { allApproved: boolean; hasRejected: boolean } => {
+  const checkRequiredDocuments = (
+    application: FarmApplication,
+  ): { allApproved: boolean; hasRejected: boolean } => {
     const zorunluBelgeler = application.documents.filter(doc => doc.zorunlu !== false); // zorunlu undefined ise true kabul et
     
     if (zorunluBelgeler.length === 0) {
@@ -559,6 +842,43 @@ export function useFarmApplications() {
     return { allApproved, hasRejected };
   };
 
+  // Belgeleri kontrol et ve eksik belge var mı kontrol et
+  const checkMissingDocuments = (
+    application: FarmApplication,
+    documentReviews?: DocumentReviewState
+  ): { hasMissing: boolean; missingDocuments: string[] } => {
+    const zorunluBelgeler = application.documents.filter(doc => doc.zorunlu !== false);
+    
+    if (zorunluBelgeler.length === 0) {
+      // Zorunlu belge yoksa, tüm belgeleri kontrol et
+      const eksikBelgeler = application.documents.filter(doc => {
+        const reviewStatus = documentReviews?.[doc.name]?.status || doc.status;
+        return reviewStatus !== 'Onaylandı' && (reviewStatus === 'Eksik' || reviewStatus === 'Reddedildi' || reviewStatus === 'Beklemede' || !doc.url);
+      });
+      return {
+        hasMissing: eksikBelgeler.length > 0,
+        missingDocuments: eksikBelgeler.map(doc => doc.name)
+      };
+    }
+    
+    // Zorunlu belgelerden eksik/reddedilmiş/beklemede olanları kontrol et
+    const eksikBelgeler = zorunluBelgeler.filter(doc => {
+      const reviewStatus = documentReviews?.[doc.name]?.status || doc.status;
+      // 1 tane de olsa belge eksik/reddedilmiş/beklemede ise eksik sayılır
+      return reviewStatus !== 'Onaylandı' && (
+        reviewStatus === 'Eksik' || 
+        reviewStatus === 'Reddedildi' || 
+        reviewStatus === 'Beklemede' || 
+        !doc.url
+      );
+    });
+    
+    return {
+      hasMissing: eksikBelgeler.length > 0,
+      missingDocuments: eksikBelgeler.map(doc => doc.name)
+    };
+  };
+
   // Başvuru listesinden direkt onaylama
   const handleQuickApprove = async (application: FarmApplication) => {
     // Validasyon: Zaten onaylanmışsa işlem yapma
@@ -570,55 +890,104 @@ export function useFarmApplications() {
       return;
     }
 
-    // Zorunlu belgeleri kontrol et
-    const { allApproved, hasRejected } = checkRequiredDocuments(application);
-
     // Loading state başlat
     setApprovingId(application.id);
     setError(null);
 
     try {
-      if (hasRejected) {
-        // Bir belge red ise durumu "belge_eksik" yap
-        const response = await ziraatService.updateFarmApplicationStatus(application.id, { 
-          status: 'belge_eksik',
-          reason: 'Zorunlu belgelerden biri veya birkaçı reddedilmiş durumda. Lütfen belgeleri kontrol edin.' 
+      // Belgeleri kontrol et - eksik belge var mı?
+      const { hasMissing, missingDocuments } = checkMissingDocuments(application);
+      
+      if (hasMissing) {
+        // Eksik belge varsa durumu "belge_eksik" olarak kaydet
+        const missingMessage = `Zorunlu belgelerden eksik/reddedilmiş/beklemede olanlar: ${missingDocuments.join(', ')}. Başvuru "Belge Eksik" durumuna alındı.`;
+        
+        setToast({
+          message: missingMessage,
+          tone: 'error',
+        });
+
+        // Local state'i güncelle
+        setRecords((prev) =>
+          prev.map((app) =>
+            app.id === application.id ? { ...app, status: 'Belge Eksik' } : app
+          )
+        );
+        setAllApplications((prev) =>
+          prev.map((app) =>
+            app.id === application.id ? { ...app, status: 'Belge Eksik' } : app
+          )
+        );
+
+        // Veritabanına durumu kaydet
+        await forceBelgeEksikStatus(application.id, missingMessage);
+        await loadApplications();
+        return;
+      }
+
+      // Backend'e onay isteği gönder (belgeler tamam ise)
+      const response = await ziraatService.approveFarm(application.id);
+
+      if (response.success) {
+        // Backend zorunlu belgeleri kontrol eder; eksikse "belge_eksik" döner
+        if (response.status === 'belge_eksik') {
+          const missingMessage =
+            response.message ||
+            `${application.farm} çiftliğinin zorunlu belgeleri henüz tamamlanmadı. Başvuru "Belge Eksik" durumuna alındı.`;
+
+          setToast({
+            message: missingMessage,
+            tone: 'error',
+          });
+
+          // Local state'i hemen güncelle (hem records hem allApplications)
+          setRecords((prev) =>
+            prev.map((app) =>
+              app.id === application.id ? { ...app, status: 'Belge Eksik' } : app
+            )
+          );
+          setAllApplications((prev) =>
+            prev.map((app) =>
+              app.id === application.id ? { ...app, status: 'Belge Eksik' } : app
+            )
+          );
+
+          await forceBelgeEksikStatus(application.id, missingMessage);
+          await loadApplications();
+          return;
+        }
+
+        // Başarılı onay
+        setToast({
+          message: `${application.farm} çiftliği başarıyla onaylandı.`,
+          tone: 'success',
         });
         
-        if (response.success) {
-          setToast({
-            message: `${application.farm} çiftliği "Belge Eksik" durumuna alındı.`,
-            tone: 'success',
-          });
-          await loadApplications();
-        } else {
-          setToast({
-            message: response.message || 'Durum güncellenemedi',
-            tone: 'error',
-          });
-        }
-      } else if (allApproved) {
-        // Tüm zorunlu belgeler onaylıysa çiftliği onayla
-        const response = await ziraatService.approveFarm(application.id);
-
-        if (response.success) {
-          setToast({
-            message: `${application.farm} çiftliği başarıyla onaylandı.`,
-            tone: 'success',
-          });
-          await loadApplications();
-        } else {
-          const errorMessage = response.message || 'Onay işlemi başarısız oldu';
-          setError(errorMessage);
-          setToast({
-            message: errorMessage,
-            tone: 'error',
-          });
-        }
+        // Önce local state'te başvurunun durumunu güncelle (anında UI güncellemesi için)
+        console.log(`🔄 [QUICK APPROVE] Local state güncelleniyor - ${application.id} -> Onaylandı`);
+        setRecords((prev) =>
+          prev.map((app) => {
+            if (app.id === application.id) {
+              console.log(`✅ [QUICK APPROVE] Başvuru bulundu ve güncellendi:`, {
+                id: app.id,
+                eskiDurum: app.status,
+                yeniDurum: 'Onaylandı'
+              });
+              return { ...app, status: 'Onaylandı' };
+            }
+            return app;
+          })
+        );
+        
+        // Listeyi yenile (backend'den güncel veriyi çek)
+        console.log('🔄 [QUICK APPROVE] Backend\'den liste yenileniyor...');
+        await loadApplications();
+        console.log('✅ [QUICK APPROVE] Liste yenileme tamamlandı');
       } else {
-        // Zorunlu belgeler henüz onaylanmamış
+        const errorMessage = response.message || 'Onay işlemi başarısız oldu';
+        setError(errorMessage);
         setToast({
-          message: 'Tüm zorunlu belgeler onaylanmalıdır. Lütfen belgeleri kontrol edin.',
+          message: errorMessage,
           tone: 'error',
         });
       }
@@ -703,7 +1072,9 @@ export function useFarmApplications() {
     selectedStatus,
     setSelectedStatus,
     applications: records,
+    allApplications, // İstatistikler için tüm başvurular
     setApplications: setRecords,
+    approvedFarmCount,
     inspectedApplication,
     setInspectedApplication,
     rejectedApplication,

@@ -54,7 +54,9 @@ export type ProductSummary = {
 
 export type FarmSummary = {
   newApplications: number;
-  inReview: number;
+  inspections: number;
+  missingDocuments: number;
+  totalApplications: number;
   approved: number;
 };
 
