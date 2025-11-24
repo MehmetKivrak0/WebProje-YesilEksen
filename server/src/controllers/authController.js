@@ -258,6 +258,9 @@ const register = async (req, res) => {
             }
 
             // Çiftçi belgelerini kaydet (belgeler tablosu kullanılıyor)
+            console.log(`📄 [BELGE KAYIT] Çiftçi belgelerinin kaydı başlatılıyor...`);
+            console.log(`📄 [BELGE KAYIT] Başvuru ID: ${basvuruId}, Kullanıcı ID: ${user.id}`);
+            
             const belgeTypes = {
                 tapuOrKiraDocument: 'tapu_kira',
                 nufusCuzdani: 'nufus_cuzdani',
@@ -267,10 +270,15 @@ const register = async (req, res) => {
                 donerSermayeMakbuz: 'doner_sermaye'
             };
 
+            let kaydedilenBelgeSayisi = 0;
+            let hataliDosyaSayisi = 0;
+
             for (const [fileKey, belgeKod] of Object.entries(belgeTypes)) {
                 const fileArray = files[fileKey];
                 if (fileArray && fileArray.length > 0) {
                     const file = fileArray[0];
+                    console.log(`📄 [BELGE KAYIT] ${fileKey} işleniyor - Dosya adı: ${file.originalname}, Boyut: ${file.size} bytes`);
+                    
                     const filePath = normalizeFilePath(file, userType, user.id);
                     
                     // Belge türü ID'sini bul (kod'a göre)
@@ -282,8 +290,10 @@ const register = async (req, res) => {
                     let belgeTuruId;
                     if (belgeTuruResult.rows.length > 0) {
                         belgeTuruId = belgeTuruResult.rows[0].id;
+                        console.log(`📄 [BELGE KAYIT] Belge türü bulundu: ${belgeKod} (ID: ${belgeTuruId})`);
                     } else {
                         // Belge türü yoksa oluştur
+                        console.log(`📄 [BELGE KAYIT] Belge türü bulunamadı, yeni oluşturuluyor: ${belgeKod}`);
                         const newBelgeTuruResult = await client.query(
                             `INSERT INTO belge_turleri (kod, ad, zorunlu, aktif)
                             VALUES ($1, $2, $3, TRUE)
@@ -291,25 +301,73 @@ const register = async (req, res) => {
                             [belgeKod, belgeKod.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), true]
                         );
                         belgeTuruId = newBelgeTuruResult.rows[0].id;
+                        console.log(`✅ [BELGE KAYIT] Yeni belge türü oluşturuldu (ID: ${belgeTuruId})`);
                     }
                     
                     // Dosya bilgilerini al
                     if (!filePath) {
-                        console.warn(`⚠️ Dosya yolu oluşturulamadı: ${fileKey}`);
+                        console.error(`❌ [BELGE KAYIT] HATA: Dosya yolu oluşturulamadı - ${fileKey}`);
+                        console.error(`❌ [BELGE KAYIT] Dosya detayları:`, {
+                            fieldname: file.fieldname,
+                            originalname: file.originalname,
+                            destination: file.destination,
+                            filename: file.filename,
+                            path: file.path
+                        });
+                        hataliDosyaSayisi++;
                         continue; // Bu dosyayı atla ve bir sonrakine geç
                     }
                     
                     const fileExt = filePath.split('.').pop()?.toLowerCase() || 'pdf';
                     const fileSize = file.size || 0;
                     
+                    console.log(`💾 [BELGE KAYIT] Veritabanına kaydediliyor:`, {
+                        kullanici_id: user.id,
+                        basvuru_id: basvuruId,
+                        basvuru_tipi: 'ciftlik_basvurusu',
+                        belge_turu_id: belgeTuruId,
+                        dosya_adi: file.originalname,
+                        dosya_yolu: filePath,
+                        dosya_boyutu: fileSize,
+                        dosya_tipi: fileExt
+                    });
+                    
                     // Belgeyi kaydet - basvuru_id ve basvuru_tipi ile bağla
-                    await client.query(
-                        `INSERT INTO belgeler 
-                        (kullanici_id, basvuru_id, basvuru_tipi, belge_turu_id, ad, dosya_yolu, dosya_boyutu, dosya_tipi, durum, zorunlu)
-                        VALUES ($1, $2, 'ciftlik_basvurusu', $3, $4, $5, $6, $7, 'beklemede', $8)`,
-                        [user.id, basvuruId, belgeTuruId, file.originalname, filePath, fileSize, fileExt, true]
-                    );
+                    try {
+                        const belgeInsertResult = await client.query(
+                            `INSERT INTO belgeler 
+                            (kullanici_id, basvuru_id, basvuru_tipi, belge_turu_id, ad, dosya_yolu, dosya_boyutu, dosya_tipi, durum, zorunlu)
+                            VALUES ($1, $2, 'ciftlik_basvurusu', $3, $4, $5, $6, $7, 'beklemede', $8)
+                            RETURNING id`,
+                            [user.id, basvuruId, belgeTuruId, file.originalname, filePath, fileSize, fileExt, true]
+                        );
+                        const belgeId = belgeInsertResult.rows[0].id;
+                        console.log(`✅ [BELGE KAYIT] Belge başarıyla kaydedildi - ${fileKey} (Belge ID: ${belgeId})`);
+                        kaydedilenBelgeSayisi++;
+                    } catch (belgeError) {
+                        console.error(`❌ [BELGE KAYIT] HATA: Belge veritabanına kaydedilemedi - ${fileKey}`);
+                        console.error(`❌ [BELGE KAYIT] Hata detayı:`, {
+                            message: belgeError.message,
+                            code: belgeError.code,
+                            detail: belgeError.detail,
+                            hint: belgeError.hint
+                        });
+                        hataliDosyaSayisi++;
+                    }
+                } else {
+                    console.log(`ℹ️ [BELGE KAYIT] ${fileKey} için dosya yüklenmemiş (opsiyonel)`);
                 }
+            }
+
+            console.log(`📊 [BELGE KAYIT] Belge kayıt özeti:`, {
+                toplam_beklenen: Object.keys(belgeTypes).length,
+                basarili: kaydedilenBelgeSayisi,
+                hatali: hataliDosyaSayisi,
+                atlanmis: Object.keys(belgeTypes).length - kaydedilenBelgeSayisi - hataliDosyaSayisi
+            });
+
+            if (kaydedilenBelgeSayisi === 0) {
+                console.warn(`⚠️ [BELGE KAYIT] UYARI: Hiçbir belge kaydedilemedi! Bu çiftlik onaylanamayabilir.`);
             }
 
         } else if (rol === 'firma') {

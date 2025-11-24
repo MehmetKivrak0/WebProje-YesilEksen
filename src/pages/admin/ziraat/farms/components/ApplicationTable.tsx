@@ -6,10 +6,12 @@ type ApplicationTableProps = {
   applications: FarmApplication[];
   onInspect: (application: FarmApplication) => void;
   onReject: (application: FarmApplication) => void;
+  onQuickApprove: (application: FarmApplication) => void;
   rejectingId?: string | null;
+  approvingId?: string | null;
 };
 
-function ApplicationTable({ applications, onInspect, onReject, rejectingId }: ApplicationTableProps) {
+function ApplicationTable({ applications, onInspect, onReject, onQuickApprove, rejectingId, approvingId }: ApplicationTableProps) {
   const [selectedApplication, setSelectedApplication] = useState<FarmApplication | null>(null);
   return (
     <div className="overflow-x-auto">
@@ -62,16 +64,34 @@ function ApplicationTable({ applications, onInspect, onReject, rejectingId }: Ap
               <td className="px-6 py-4 text-right">
                 <div className="inline-flex items-center gap-2">
                   <button
+                    className="rounded-full border border-green-600/40 bg-green-600/10 px-4 py-1 text-sm font-medium text-green-700 transition-colors hover:bg-green-600/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    onClick={() => onQuickApprove(farm)}
+                    disabled={approvingId === farm.id || rejectingId === farm.id || farm.status === 'Onaylandı'}
+                    title="Zorunlu belgeler onaylıysa çiftliği onayla, bir tanesi red ise belge eksik durumuna al"
+                  >
+                    {approvingId === farm.id ? (
+                      <>
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-green-700 border-t-transparent dark:border-green-400"></span>
+                        <span>İşleniyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-base">check_circle</span>
+                        <span>Onayla</span>
+                      </>
+                    )}
+                  </button>
+                  <button
                     className="rounded-full border border-primary/40 bg-primary/10 px-4 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:border-primary/40 dark:hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => onInspect(farm)}
-                    disabled={rejectingId === farm.id}
+                    disabled={rejectingId === farm.id || approvingId === farm.id}
                   >
                     İncele
                   </button>
                   <button
                     className="rounded-full bg-red-600 px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     onClick={() => onReject(farm)}
-                    disabled={rejectingId === farm.id}
+                    disabled={rejectingId === farm.id || approvingId === farm.id}
                   >
                     {rejectingId === farm.id ? (
                       <>

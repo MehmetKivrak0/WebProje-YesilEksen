@@ -1,16 +1,11 @@
 import { useEffect } from 'react';
-import type { ToastState } from '../hooks/useFarmApplications';
 
 type FarmToastProps = {
-  toast: ToastState;
+  toast: { message: string; tone: 'success' | 'error' };
   onClose?: () => void;
 };
 
 function FarmToast({ toast, onClose }: FarmToastProps) {
-  if (!toast) {
-    return null;
-  }
-
   const isError = toast.tone === 'error';
   const isSuccess = toast.tone === 'success';
 

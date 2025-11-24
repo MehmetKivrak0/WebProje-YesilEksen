@@ -127,14 +127,20 @@ const getDashboardStats = async (req, res) => {
         const farmStats = await pool.query(`
             SELECT 
                 COUNT(*) FILTER (WHERE durum = 'ilk_inceleme') as newApplications,
-                0 as inspections,
-                COUNT(*) FILTER (WHERE durum = 'onaylandi') as approved
+                0 as inspections
             FROM ciftlik_basvurulari
+        `);
+        
+        // Onaylanan çiftlik sayısı - ciftlikler tablosundan aktif çiftlikler (kayıtlı çiftçiler)
+        const approvedFarmsCount = await pool.query(`
+            SELECT COUNT(*) as approved
+            FROM ciftlikler
+            WHERE durum = 'aktif' AND silinme IS NULL
         `);
 
         // Toplam kayıtlı çiftçi
         const farmersCount = await pool.query(`
-            SELECT COUNT(*) as total FROM ciftlikler WHERE durum = 'aktif'
+            SELECT COUNT(*) as total FROM ciftlikler WHERE durum = 'aktif' AND silinme IS NULL
         `);
 
         // Toplam ürün
@@ -153,7 +159,7 @@ const getDashboardStats = async (req, res) => {
                 farmSummary: {
                     newApplications: parseInt(farmStats.rows[0].newapplications || 0),
                     inspections: parseInt(farmStats.rows[0].inspections || 0),
-                    approved: parseInt(farmStats.rows[0].approved || 0)
+                    approved: parseInt(approvedFarmsCount.rows[0].approved || 0)
                 },
                 totalFarmers: parseInt(farmersCount.rows[0].total || 0),
                 totalProducts: parseInt(productsCount.rows[0].total || 0)
@@ -385,7 +391,8 @@ const getFarmApplications = async (req, res) => {
                             'url', b.dosya_yolu,
                             'belgeId', b.id,
                             'farmerNote', COALESCE(b.red_nedeni, b.kullanici_notu, ''),
-                            'adminNote', COALESCE(b.yonetici_notu, '')
+                            'adminNote', COALESCE(b.yonetici_notu, ''),
+                            'zorunlu', COALESCE(b.zorunlu, bt.zorunlu, TRUE)
                         ) ORDER BY COALESCE(bt.ad, b.ad, '')
                     ) FILTER (WHERE b.id IS NOT NULL),
                     '[]'::json
@@ -600,7 +607,10 @@ const approveFarm = async (req, res) => {
         await client.query('BEGIN');
         
         const { id } = req.params; // basvuru_id
-        const { note } = req.body;
+        const { note } = req.body || {};
+
+        console.log(`🔍 [CIFTLIK ONAY] Başvuru ID: ${id} için onaylama işlemi başlatıldı`);
+        console.log(`📝 [CIFTLIK ONAY] Admin ID: ${req.user?.id}, Admin Not: ${note || 'Yok'}`);
 
         // Başvuruyu kontrol et
         const basvuruResult = await client.query(
@@ -612,6 +622,7 @@ const approveFarm = async (req, res) => {
         );
 
         if (basvuruResult.rows.length === 0) {
+            console.error(`❌ [CIFTLIK ONAY] Başvuru ID ${id} bulunamadı`);
             await client.query('ROLLBACK');
             return res.status(404).json({
                 success: false,
@@ -620,6 +631,45 @@ const approveFarm = async (req, res) => {
         }
 
         const basvuru = basvuruResult.rows[0];
+        console.log(`✅ [CIFTLIK ONAY] Başvuru bulundu - Çiftlik: ${basvuru.ciftlik_adi}, Kullanıcı: ${basvuru.kullanici_ad} ${basvuru.kullanici_soyad}`);
+        console.log(`📊 [CIFTLIK ONAY] Mevcut durum: ${basvuru.durum}, Mevcut ciftlik_id: ${basvuru.ciftlik_id || 'Yok'}`);
+        
+        // Belgeleri kontrol et
+        const belgelerResult = await client.query(
+            `SELECT b.id, b.ad, b.durum, b.dosya_yolu, b.zorunlu, bt.ad as belge_turu_adi
+             FROM belgeler b
+             LEFT JOIN belge_turleri bt ON b.belge_turu_id = bt.id
+             WHERE b.basvuru_id = $1 AND b.basvuru_tipi = 'ciftlik_basvurusu'`,
+            [id]
+        );
+        
+        console.log(`📄 [CIFTLIK ONAY] Toplam belge sayısı: ${belgelerResult.rows.length}`);
+        
+        if (belgelerResult.rows.length === 0) {
+            console.warn(`⚠️ [CIFTLIK ONAY] UYARI: Başvuruya ait hiç belge bulunamadı!`);
+            console.warn(`⚠️ [CIFTLIK ONAY] Belge kontrolü: basvuru_id=${id}, basvuru_tipi='ciftlik_basvurusu'`);
+        } else {
+            belgelerResult.rows.forEach((belge, index) => {
+                console.log(`📄 [CIFTLIK ONAY] Belge ${index + 1}:`, {
+                    id: belge.id,
+                    ad: belge.ad || belge.belge_turu_adi || 'İsimsiz',
+                    durum: belge.durum,
+                    dosya_yolu: belge.dosya_yolu ? 'Var' : 'Yok',
+                    zorunlu: belge.zorunlu
+                });
+            });
+            
+            // Zorunlu belgelerden onaylanmayanları kontrol et
+            const zorunluBelgeler = belgelerResult.rows.filter(b => b.zorunlu);
+            const onaylanmamisZorunluBelgeler = zorunluBelgeler.filter(b => b.durum !== 'onaylandi');
+            
+            if (onaylanmamisZorunluBelgeler.length > 0) {
+                console.warn(`⚠️ [CIFTLIK ONAY] UYARI: ${onaylanmamisZorunluBelgeler.length} adet zorunlu belge onaylanmamış:`);
+                onaylanmamisZorunluBelgeler.forEach(belge => {
+                    console.warn(`   - ${belge.ad || belge.belge_turu_adi}: ${belge.durum}`);
+                });
+            }
+        }
 
         // Eğer başvuru zaten onaylanmışsa ve ciftlik_id varsa, mevcut çiftliği aktif yap
         if (basvuru.ciftlik_id && basvuru.durum === 'onaylandi') {
@@ -655,6 +705,7 @@ const approveFarm = async (req, res) => {
         }
 
         // ciftlikler tablosuna yeni kayıt oluştur
+        console.log(`🏗️ [CIFTLIK ONAY] Yeni çiftlik kaydı oluşturuluyor...`);
         const aciklama = note 
             ? `Onay Notu: ${note}${basvuru.notlar ? '\n' + basvuru.notlar : ''}`
             : (basvuru.notlar || '');
@@ -673,8 +724,10 @@ const approveFarm = async (req, res) => {
         );
 
         const ciftlikId = ciftlikResult.rows[0].id;
+        console.log(`✅ [CIFTLIK ONAY] Çiftlik kaydı oluşturuldu - Yeni Çiftlik ID: ${ciftlikId}`);
 
         // ciftlik_basvurulari tablosunu güncelle: ciftlik_id, durum, onay_tarihi
+        console.log(`🔄 [CIFTLIK ONAY] Başvuru durumu güncelleniyor...`);
         await client.query(
             `UPDATE ciftlik_basvurulari 
             SET ciftlik_id = $1, durum = 'onaylandi', onay_tarihi = NOW(), 
@@ -682,20 +735,36 @@ const approveFarm = async (req, res) => {
             WHERE id = $3`,
             [ciftlikId, req.user?.id, id]
         );
+        console.log(`✅ [CIFTLIK ONAY] Başvuru durumu 'onaylandi' olarak güncellendi`);
 
         // Belgeleri ciftlik_id ile de bağla (onaylandıktan sonra)
-        await client.query(
+        console.log(`📎 [CIFTLIK ONAY] Belgeler çiftlik ile ilişkilendiriliyor...`);
+        const belgeUpdateResult = await client.query(
             `UPDATE belgeler 
-            SET ciftlik_id = $1 
-            WHERE basvuru_id = $2 AND basvuru_tipi = 'ciftlik_basvurusu'`,
+            SET ciftlik_id = $1, guncelleme = NOW()
+            WHERE basvuru_id = $2 AND basvuru_tipi = 'ciftlik_basvurusu'
+            RETURNING id, ad, dosya_yolu`,
             [ciftlikId, id]
         );
+        
+        if (belgeUpdateResult.rows.length === 0) {
+            console.error(`❌ [CIFTLIK ONAY] HATA: Hiçbir belge güncellenmedi!`);
+            console.error(`❌ [CIFTLIK ONAY] Belge güncellemesi başarısız - Kontrol parametreleri: basvuru_id=${id}, basvuru_tipi='ciftlik_basvurusu'`);
+            console.error(`❌ [CIFTLIK ONAY] Bu durum belgelerin veritabanında doğru kaydedilmediğini gösterir.`);
+        } else {
+            console.log(`✅ [CIFTLIK ONAY] ${belgeUpdateResult.rows.length} adet belge çiftlik ID ${ciftlikId} ile ilişkilendirildi:`);
+            belgeUpdateResult.rows.forEach((belge, index) => {
+                console.log(`   ${index + 1}. ${belge.ad || 'İsimsiz'} (ID: ${belge.id}) - ${belge.dosya_yolu ? 'Dosya var' : 'Dosya yok'}`);
+            });
+        }
 
         // Atık türlerini notlar'dan oku ve ciftlik_atik_kapasiteleri tablosuna ekle (varsa)
+        console.log(`♻️ [CIFTLIK ONAY] Atık türleri kontrol ediliyor...`);
         if (basvuru.notlar && basvuru.notlar.includes('Atık Türleri:')) {
             const atikTurleriMatch = basvuru.notlar.match(/Atık Türleri:\s*([^\n]+)/);
             if (atikTurleriMatch) {
                 const atikTurleriListesi = atikTurleriMatch[1].split(',').map(t => t.trim());
+                console.log(`♻️ [CIFTLIK ONAY] Bulunan atık türleri: ${atikTurleriListesi.join(', ')}`);
                 
                 // Birim ID'sini bul (ton için - default)
                 const birimResult = await client.query(
@@ -703,6 +772,11 @@ const approveFarm = async (req, res) => {
                 );
                 const birimId = birimResult.rows.length > 0 ? birimResult.rows[0].id : null;
                 
+                if (!birimId) {
+                    console.warn(`⚠️ [CIFTLIK ONAY] Birim ID bulunamadı (ton veya kg)`);
+                }
+                
+                let eklenenAtikSayisi = 0;
                 for (const wasteTypeKod of atikTurleriListesi) {
                     // Atık türü ID'sini bul
                     const atikTuruResult = await client.query(
@@ -721,12 +795,19 @@ const approveFarm = async (req, res) => {
                             ON CONFLICT (ciftlik_id, atik_turu_id) DO NOTHING`,
                             [ciftlikId, atikTuruId, birimId]
                         );
+                        eklenenAtikSayisi++;
+                    } else {
+                        console.warn(`⚠️ [CIFTLIK ONAY] Atık türü bulunamadı veya birim yok: ${wasteTypeKod}`);
                     }
                 }
+                console.log(`✅ [CIFTLIK ONAY] ${eklenenAtikSayisi} adet atık türü kapasitesi eklendi`);
             }
+        } else {
+            console.log(`ℹ️ [CIFTLIK ONAY] Başvuruda atık türü bilgisi yok`);
         }
 
         // Log kaydı ekle - Onaylama
+        console.log(`📝 [CIFTLIK ONAY] Aktivite logu kaydediliyor...`);
         await logCiftlikActivity(client, {
             kullanici_id: req.user?.id,
             ciftlik_id: ciftlikId,
@@ -739,21 +820,37 @@ const approveFarm = async (req, res) => {
             user_agent: req.get('user-agent')
         });
 
+        console.log(`💾 [CIFTLIK ONAY] Transaction COMMIT yapılıyor...`);
         await client.query('COMMIT');
+        console.log(`✅ [CIFTLIK ONAY] İşlem başarıyla tamamlandı - Çiftlik ID: ${ciftlikId}`);
 
         // TODO: Bildirim oluştur
 
         res.json({
             success: true,
-            message: 'Çiftlik başvurusu onaylandı ve çiftlikler tablosuna kayıt oluşturuldu'
+            message: 'Çiftlik başvurusu onaylandı ve çiftlikler tablosuna kayıt oluşturuldu',
+            ciftlikId: ciftlikId
         });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Approve farm hatası:', error);
+        console.error('❌ [CIFTLIK ONAY] HATA: Çiftlik onaylama işlemi başarısız');
+        console.error('❌ [CIFTLIK ONAY] Hata detayı:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            detail: error.detail,
+            hint: error.hint,
+            basvuru_id: req.params.id,
+            admin_id: req.user?.id
+        });
         res.status(500).json({
             success: false,
             message: 'Çiftlik onaylama işlemi başarısız',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                detail: error.detail,
+                hint: error.hint
+            } : undefined
         });
     } finally {
         client.release();
@@ -1316,17 +1413,34 @@ const getAllFarmLogs = async (req, res) => {
 
 // Belge durumunu güncelle - PUT /api/ziraat/documents/:belgeId
 const updateDocumentStatus = async (req, res) => {
+    const client = await pool.connect();
     try {
+        await client.query('BEGIN');
+        
         const { belgeId } = req.params;
         const { status, reason, adminNote } = req.body;
 
+        console.log(`📄 [BELGE GUNCELLEME] Başlatıldı - Belge ID: ${belgeId}`);
+        console.log(`📄 [BELGE GUNCELLEME] İstek verisi:`, {
+            status,
+            reason: reason ? 'Var' : 'Yok',
+            adminNote: adminNote ? 'Var' : 'Yok',
+            admin_id: req.user?.id
+        });
+
         // Belgeyi kontrol et
-        const checkResult = await pool.query(
-            'SELECT id, basvuru_id, basvuru_tipi FROM belgeler WHERE id = $1',
+        const checkResult = await client.query(
+            `SELECT b.id, b.basvuru_id, b.basvuru_tipi, b.ad, b.durum as eski_durum, b.dosya_yolu,
+                    bt.ad as belge_turu_adi, bt.kod as belge_turu_kodu
+             FROM belgeler b
+             LEFT JOIN belge_turleri bt ON b.belge_turu_id = bt.id
+             WHERE b.id = $1`,
             [belgeId]
         );
 
         if (checkResult.rows.length === 0) {
+            console.error(`❌ [BELGE GUNCELLEME] Belge bulunamadı - ID: ${belgeId}`);
+            await client.query('ROLLBACK');
             return res.status(404).json({
                 success: false,
                 message: 'Belge bulunamadı'
@@ -1334,6 +1448,20 @@ const updateDocumentStatus = async (req, res) => {
         }
 
         const belge = checkResult.rows[0];
+        console.log(`✅ [BELGE GUNCELLEME] Belge bulundu:`, {
+            id: belge.id,
+            ad: belge.ad,
+            belge_turu: belge.belge_turu_adi || belge.belge_turu_kodu,
+            basvuru_id: belge.basvuru_id,
+            basvuru_tipi: belge.basvuru_tipi,
+            eski_durum: belge.eski_durum,
+            dosya_yolu: belge.dosya_yolu ? 'Var' : 'YOK'
+        });
+
+        if (!belge.basvuru_id || !belge.basvuru_tipi) {
+            console.error(`❌ [BELGE GUNCELLEME] KRITIK HATA: Belge başvuru ile ilişkilendirilmemiş!`);
+            console.error(`❌ [BELGE GUNCELLEME] Belge ID ${belgeId} için basvuru_id veya basvuru_tipi eksik`);
+        }
 
         // Durum mapping: Frontend -> Backend
         const statusMap = {
@@ -1343,6 +1471,7 @@ const updateDocumentStatus = async (req, res) => {
             'Beklemede': 'beklemede'
         };
         const backendStatus = statusMap[status] || 'beklemede';
+        console.log(`🔄 [BELGE GUNCELLEME] Durum değişimi: ${belge.eski_durum} → ${backendStatus}`);
 
         // Belgeyi güncelle
         const updateFields = [];
@@ -1355,11 +1484,13 @@ const updateDocumentStatus = async (req, res) => {
         if (reason !== undefined) {
             updateFields.push(`red_nedeni = $${paramIndex++}`);
             updateValues.push(reason);
+            console.log(`📝 [BELGE GUNCELLEME] Red nedeni eklendi`);
         }
 
         if (adminNote !== undefined) {
             updateFields.push(`yonetici_notu = $${paramIndex++}`);
             updateValues.push(adminNote);
+            console.log(`📝 [BELGE GUNCELLEME] Yönetici notu eklendi`);
         }
 
         updateFields.push(`inceleme_tarihi = NOW()`);
@@ -1373,21 +1504,150 @@ const updateDocumentStatus = async (req, res) => {
             UPDATE belgeler 
             SET ${updateFields.join(', ')}
             WHERE id = $${paramIndex}
+            RETURNING id, durum, basvuru_id, basvuru_tipi
         `;
 
-        await pool.query(updateQuery, updateValues);
+        console.log(`💾 [BELGE GUNCELLEME] SQL sorgusu çalıştırılıyor...`);
+        const updateResult = await client.query(updateQuery, updateValues);
+
+        if (updateResult.rows.length === 0) {
+            console.error(`❌ [BELGE GUNCELLEME] HATA: Güncelleme başarısız - hiçbir satır etkilenmedi`);
+            await client.query('ROLLBACK');
+            return res.status(500).json({
+                success: false,
+                message: 'Belge güncellenemedi'
+            });
+        }
+
+        console.log(`✅ [BELGE GUNCELLEME] Belge başarıyla güncellendi:`, {
+            belge_id: updateResult.rows[0].id,
+            yeni_durum: updateResult.rows[0].durum,
+            basvuru_id: updateResult.rows[0].basvuru_id,
+            basvuru_tipi: updateResult.rows[0].basvuru_tipi
+        });
+
+        await client.query('COMMIT');
 
         res.json({
             success: true,
             message: 'Belge durumu güncellendi'
         });
     } catch (error) {
-        console.error('Belge güncelleme hatası:', error);
+        await client.query('ROLLBACK');
+        console.error('❌ [BELGE GUNCELLEME] HATA:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            detail: error.detail,
+            hint: error.hint,
+            belge_id: req.params.belgeId
+        });
         res.status(500).json({
             success: false,
             message: 'Belge güncellenemedi',
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                detail: error.detail,
+                hint: error.hint
+            } : undefined
+        });
+    } finally {
+        client.release();
+    }
+};
+
+// Başvuru durumunu güncelle - PUT /api/ziraat/farms/status/:id
+// ciftlik_basvurulari tablosundaki başvurunun durumunu güncelle
+const updateFarmApplicationStatus = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        const { id } = req.params; // basvuru_id
+        const { status, reason } = req.body;
+
+        if (!status) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                message: 'Durum zorunludur'
+            });
+        }
+
+        // Geçerli durum kontrolü
+        const validStatuses = ['ilk_inceleme', 'onaylandi', 'reddedildi', 'belge_eksik'];
+        if (!validStatuses.includes(status)) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                message: 'Geçersiz durum değeri'
+            });
+        }
+
+        // Başvuruyu kontrol et
+        const checkResult = await client.query(
+            'SELECT id, durum FROM ciftlik_basvurulari WHERE id = $1',
+            [id]
+        );
+
+        if (checkResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftlik başvurusu bulunamadı'
+            });
+        }
+
+        // Önceki durumu al
+        const oncekiDurum = checkResult.rows[0].durum;
+
+        // Başvuru durumunu güncelle
+        const updateFields = ['durum = $1', 'inceleme_tarihi = NOW()', 'inceleyen_id = $2', 'guncelleme = NOW()'];
+        const updateValues = [status, req.user?.id];
+        let paramIndex = 3;
+
+        if (reason) {
+            updateFields.push(`red_nedeni = $${paramIndex++}`);
+            updateValues.push(reason);
+        }
+
+        updateValues.push(id);
+
+        await client.query(
+            `UPDATE ciftlik_basvurulari 
+            SET ${updateFields.join(', ')}
+            WHERE id = $${paramIndex}`,
+            updateValues
+        );
+
+        // Log kaydı ekle
+        await logCiftlikActivity(client, {
+            kullanici_id: req.user?.id,
+            basvuru_id: id,
+            islem_tipi: 'durum_degisikligi',
+            eski_durum: oncekiDurum,
+            yeni_durum: status,
+            aciklama: reason || `Başvuru durumu ${status} olarak güncellendi`,
+            ip_adresi: req.ip,
+            user_agent: req.get('user-agent')
+        });
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: 'Başvuru durumu güncellendi'
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Başvuru durumu güncelleme hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Başvuru durumu güncellenemedi',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
+    } finally {
+        client.release();
     }
 };
 
@@ -1404,5 +1664,6 @@ module.exports = {
     getActivityLog,
     getFarmLogs,
     getAllFarmLogs,
-    updateDocumentStatus
+    updateDocumentStatus,
+    updateFarmApplicationStatus
 };

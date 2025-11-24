@@ -140,3 +140,5 @@ Kullanılmayan değişkenler kaldırıldı:
 - **Çözüm Uygulandı**: 2024
 - **Dokümantasyon**: 2024
 
+
+

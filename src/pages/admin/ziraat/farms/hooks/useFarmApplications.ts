@@ -18,6 +18,7 @@ const mapStatusFromBackend = (status: string): Exclude<FarmStatus, 'Aktif' | 'Be
     'denetimde': 'İlk İnceleme', // Denetimde durumu artık kullanılmıyor, İlk İnceleme'ye map ediliyor
     'onaylandi': 'Onaylandı',
     'reddedildi': 'Evrak Bekliyor',
+    'belge_eksik': 'Evrak Bekliyor', // Belge eksik durumu
     'yeni': 'İlk İnceleme',
   };
   return statusMap[status.toLowerCase()] || 'İlk İnceleme';
@@ -47,6 +48,7 @@ const mapApiApplicationToFarmApplication = (apiApp: ApiFarmApplication): FarmApp
       belgeId: doc.belgeId || undefined,
       farmerNote: doc.farmerNote || undefined,
       adminNote: doc.adminNote || undefined,
+      zorunlu: doc.zorunlu !== undefined ? doc.zorunlu : true, // Default true
     }));
   };
 
@@ -81,6 +83,7 @@ export function useFarmApplications() {
   const [documentReviewsByApplication, setDocumentReviewsByApplication] = useState<Record<string, DocumentReviewState>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [updatingDocumentId, setUpdatingDocumentId] = useState<string | null>(null); // Belge güncelleme durumu
   const [toast, setToast] = useState<ToastState>(null);
 
   // Verileri yükle
@@ -118,13 +121,12 @@ export function useFarmApplications() {
 
       if (response.success) {
         const mappedApplications = response.applications.map(mapApiApplicationToFarmApplication);
-        console.log('✅ Mapped applications:', mappedApplications.length);
         setRecords(mappedApplications);
       } else {
         setError('Başvurular yüklenemedi');
       }
     } catch (err) {
-      console.error('❌ Farm applications yükleme hatası:', err);
+      console.error('Farm applications yükleme hatası:', err);
       setError('Başvurular yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);
@@ -149,18 +151,35 @@ export function useFarmApplications() {
       return;
     }
 
-    // Eğer bu uygulama için daha önce reviews yoksa, başlangıç değerlerini oluştur
+    // Records'tan güncel uygulamayı bul (eğer varsa)
+    const currentApplication = records.find(app => app.id === inspectedApplication.id);
+    const applicationToUse = currentApplication || inspectedApplication;
+
+    // Eğer bu uygulama için daha önce reviews yoksa veya belgeler değişmişse, başlangıç değerlerini oluştur/güncelle
     setDocumentReviewsByApplication((prev) => {
-      if (prev[inspectedApplication.id]) {
-        return prev; // Zaten varsa güncelleme
+      const existingReviews = prev[applicationToUse.id];
+      
+      // Eğer reviews yoksa veya belge sayısı değişmişse, yeniden oluştur
+      const shouldUpdate = !existingReviews || 
+        Object.keys(existingReviews).length !== applicationToUse.documents.length ||
+        applicationToUse.documents.some(doc => {
+          const review = existingReviews[doc.name];
+          return !review || review.status !== doc.status;
+        });
+
+      if (!shouldUpdate && existingReviews) {
+        return prev; // Zaten güncel, güncelleme
       }
       
-      const initialReviews = inspectedApplication.documents.reduce<DocumentReviewState>(
+      const initialReviews = applicationToUse.documents.reduce<DocumentReviewState>(
         (acc, doc) => {
+          // Mevcut review varsa, onu koru (sadece eksik alanları doldur)
+          const existingReview = existingReviews?.[doc.name];
           acc[doc.name] = { 
-            status: doc.status, 
-            reason: doc.farmerNote,
-            adminNote: doc.adminNote
+            status: existingReview?.status || doc.status, 
+            reason: existingReview?.reason || doc.farmerNote,
+            adminNote: existingReview?.adminNote || doc.adminNote,
+            isSent: existingReview?.isSent || false,
           };
           return acc;
         },
@@ -169,10 +188,15 @@ export function useFarmApplications() {
 
       return {
         ...prev,
-        [inspectedApplication.id]: initialReviews,
+        [applicationToUse.id]: initialReviews,
       };
     });
-  }, [inspectedApplication]);
+
+    // Eğer records'ta güncel uygulama varsa, inspectedApplication'ı güncelle
+    if (currentApplication) {
+      setInspectedApplication(currentApplication);
+    }
+  }, [inspectedApplication, records]);
 
   const filteredApplications = useMemo(() => {
     if (selectedStatus === 'Hepsi') {
@@ -184,7 +208,7 @@ export function useFarmApplications() {
 
   const closeInspectModal = () => setInspectedApplication(null);
 
-  const updateDocumentStatus = (name: string, status: DocumentReviewState[string]['status']) => {
+  const updateDocumentStatus = async (name: string, status: DocumentReviewState[string]['status']) => {
     if (!inspectedApplication) return;
     
     const applicationId = inspectedApplication.id;
@@ -225,24 +249,76 @@ export function useFarmApplications() {
       }
     }
 
-    // Sadece local state'i güncelle - backend'e gönderme
-    updateDocumentReviews(applicationId, {
-      ...currentReviews,
-      [name]: {
+    // Belge ID'si kontrolü
+    if (!document?.belgeId) {
+      setToast({
+        message: `${name} belgesi için belge ID bulunamadı.`,
+        tone: 'error',
+      });
+      return;
+    }
+
+    // Loading state başlat
+    setUpdatingDocumentId(document.belgeId);
+
+    try {
+      // Backend'e direkt istek gönder
+      const response = await ziraatService.updateDocumentStatus(document.belgeId, {
         status,
         reason: status === 'Reddedildi' ? currentReviews[name]?.reason : undefined,
         adminNote: currentReviews[name]?.adminNote,
-      },
-    });
+      });
 
-    const statusMessage = status === 'Onaylandı' ? 'onaylandı' : 'reddedildi';
-    setToast({
-      message: `${name} belgesi ${statusMessage} olarak işaretlendi. Değişiklikler onaylandığında kaydedilecek.`,
-      tone: 'success',
-    });
+      if (response.success) {
+        // Local state'i güncelle
+        updateDocumentReviews(applicationId, {
+          ...currentReviews,
+          [name]: {
+            status,
+            reason: status === 'Reddedildi' ? currentReviews[name]?.reason : undefined,
+            adminNote: currentReviews[name]?.adminNote,
+          },
+        });
+
+        // Belge durumunu application.documents'ta da güncelle
+        setRecords((prev) =>
+          prev.map((app) => {
+            if (app.id === applicationId) {
+              return {
+                ...app,
+                documents: app.documents.map((doc) =>
+                  doc.name === name ? { ...doc, status } : doc
+                ),
+              };
+            }
+            return app;
+          })
+        );
+
+        const statusMessage = status === 'Onaylandı' ? 'onaylandı' : 'reddedildi';
+        setToast({
+          message: `${name} belgesi başarıyla ${statusMessage}.`,
+          tone: 'success',
+        });
+      } else {
+        setToast({
+          message: response.message || 'Belge güncellenemedi',
+          tone: 'error',
+        });
+      }
+    } catch (error: any) {
+      console.error('Belge güncelleme hatası:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Belge güncellenirken bir hata oluştu';
+      setToast({
+        message: errorMessage,
+        tone: 'error',
+      });
+    } finally {
+      setUpdatingDocumentId(null);
+    }
   };
 
-  const updateDocumentReason = (name: string, reason: string) => {
+  const updateDocumentReason = (name: string, reason: string, isSent?: boolean) => {
     if (!inspectedApplication) return;
     
     const applicationId = inspectedApplication.id;
@@ -255,6 +331,7 @@ export function useFarmApplications() {
         status: currentReviews[name]?.status ?? 'Reddedildi',
         reason,
         adminNote: currentReviews[name]?.adminNote,
+        isSent: isSent ?? currentReviews[name]?.isSent,
       },
     });
   };
@@ -266,12 +343,14 @@ export function useFarmApplications() {
     const currentReviews = getDocumentReviews(applicationId);
     
     // Sadece local state'i güncelle - backend'e gönderme
+    // isSent flag'ini koru
     updateDocumentReviews(applicationId, {
       ...currentReviews,
       [name]: {
         status: currentReviews[name]?.status ?? 'Beklemede',
         reason: currentReviews[name]?.reason,
         adminNote,
+        isSent: currentReviews[name]?.isSent,
       },
     });
   };
@@ -289,19 +368,27 @@ export function useFarmApplications() {
 
       const statusChanged = review.status !== doc.status;
       const hasReason = review.reason && review.reason.trim();
-      const adminNoteChanged = review.adminNote !== (doc.adminNote || '');
+      const hasAdminNote = review.adminNote && review.adminNote.trim();
+      const isSent = review.isSent === true; // "İlet" butonuna tıklanmış mı?
 
-      // Reason varsa her zaman gönder (her "İlet" dendiğinde güncellenen reason gönderilsin)
-      // Status veya adminNote değişmişse de gönder
-      const shouldUpdate = statusChanged || hasReason || adminNoteChanged;
-
-      if (shouldUpdate) {
+      // "İlet" butonuna tıklanmış belgeler için: hem reason hem adminNote backend'e gönder
+      // "İlet" butonuna tıklanmamış belgeler için: sadece status değişikliği varsa gönder (reason ve adminNote gönderme)
+      if (isSent && (hasReason || hasAdminNote)) {
+        // "İlet" butonuna tıklanmış belgeler için reason ve adminNote gönder
         updates.push({
           belgeId: doc.belgeId,
           data: {
             status: review.status,
             reason: review.reason?.trim() || undefined,
             adminNote: review.adminNote?.trim() || undefined,
+          },
+        });
+      } else if (statusChanged) {
+        // Status değişikliği varsa (ama "İlet" butonuna tıklanmamışsa) sadece status gönder
+        updates.push({
+          belgeId: doc.belgeId,
+          data: {
+            status: review.status,
           },
         });
       }
@@ -330,14 +417,15 @@ export function useFarmApplications() {
   };
 
   // Onay işlemi sonrası state'i temizle
-  const cleanupAfterApproval = (applicationId: string) => {
-    setInspectedApplication(null);
+  const cleanupAfterApproval = (_applicationId: string) => {
+    // Sadece preview modal'ı kapat, inspect modal açık kalabilir (güncellenmiş veriyle)
     setPreviewApplication(null);
-    setDocumentReviewsByApplication((prev) => {
-      const newState = { ...prev };
-      delete newState[applicationId];
-      return newState;
-    });
+    // Document reviews'i temizleme - güncel verilerle kalabilir
+    // setDocumentReviewsByApplication((prev) => {
+    //   const newState = { ...prev };
+    //   delete newState[_applicationId];
+    //   return newState;
+    // });
   };
 
   const handleApprove = async (application: FarmApplication) => {
@@ -379,7 +467,7 @@ export function useFarmApplications() {
         // Listeyi yenile
         await loadApplications();
 
-        // State'i temizle
+        // State'i temizle (loadApplications sonrası records güncellenecek, useEffect inspectedApplication'ı güncelleyecek)
         cleanupAfterApproval(application.id);
       } else {
         const errorMessage = response.message || 'Onay işlemi başarısız oldu';
@@ -390,11 +478,111 @@ export function useFarmApplications() {
         });
       }
     } catch (err: any) {
+      console.error('Onay hatası:', err);
       const errorMessage =
         err?.response?.data?.message ||
         err?.message ||
         'Onay işlemi sırasında bir hata oluştu';
-      console.error('Onay hatası:', err);
+      setError(errorMessage);
+      setToast({
+        message: errorMessage,
+        tone: 'error',
+      });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  // Zorunlu belgelerin durumunu kontrol et
+  const checkRequiredDocuments = (application: FarmApplication): { allApproved: boolean; hasRejected: boolean } => {
+    const zorunluBelgeler = application.documents.filter(doc => doc.zorunlu !== false); // zorunlu undefined ise true kabul et
+    
+    if (zorunluBelgeler.length === 0) {
+      // Zorunlu belge yoksa, tüm belgeleri kontrol et
+      const allApproved = application.documents.every(doc => doc.status === 'Onaylandı');
+      const hasRejected = application.documents.some(doc => doc.status === 'Reddedildi');
+      return { allApproved, hasRejected };
+    }
+    
+    const allApproved = zorunluBelgeler.every(doc => doc.status === 'Onaylandı');
+    const hasRejected = zorunluBelgeler.some(doc => doc.status === 'Reddedildi');
+    
+    return { allApproved, hasRejected };
+  };
+
+  // Başvuru listesinden direkt onaylama
+  const handleQuickApprove = async (application: FarmApplication) => {
+    // Validasyon: Zaten onaylanmışsa işlem yapma
+    if (application.status === 'Onaylandı') {
+      setToast({
+        message: `${application.farm} çiftliği zaten onaylanmış durumda.`,
+        tone: 'error',
+      });
+      return;
+    }
+
+    // Zorunlu belgeleri kontrol et
+    const { allApproved, hasRejected } = checkRequiredDocuments(application);
+
+    // Loading state başlat
+    setApprovingId(application.id);
+    setError(null);
+
+    try {
+      if (hasRejected) {
+        // Bir belge red ise durumu "belge_eksik" yap
+        const response = await ziraatService.updateFarmApplicationStatus(application.id, { 
+          status: 'belge_eksik',
+          reason: 'Zorunlu belgelerden biri veya birkaçı reddedilmiş durumda. Lütfen belgeleri kontrol edin.' 
+        });
+        
+        if (response.success) {
+          setToast({
+            message: `${application.farm} çiftliği "Belge Eksik" durumuna alındı.`,
+            tone: 'success',
+          });
+          await loadApplications();
+        } else {
+          setToast({
+            message: response.message || 'Durum güncellenemedi',
+            tone: 'error',
+          });
+        }
+      } else if (allApproved) {
+        // Tüm zorunlu belgeler onaylıysa çiftliği onayla
+        const response = await ziraatService.approveFarm(application.id);
+
+        if (response.success) {
+          setToast({
+            message: `${application.farm} çiftliği başarıyla onaylandı.`,
+            tone: 'success',
+          });
+          await loadApplications();
+        } else {
+          const errorMessage = response.message || 'Onay işlemi başarısız oldu';
+          setError(errorMessage);
+          setToast({
+            message: errorMessage,
+            tone: 'error',
+          });
+        }
+      } else {
+        // Zorunlu belgeler henüz onaylanmamış
+        setToast({
+          message: 'Tüm zorunlu belgeler onaylanmalıdır. Lütfen belgeleri kontrol edin.',
+          tone: 'error',
+        });
+      }
+    } catch (err: any) {
+      console.error('Hızlı onay hatası:', err);
+      console.error('Hata detayları:', {
+        url: err?.config?.url,
+        method: err?.config?.method,
+        status: err?.response?.status,
+        statusText: err?.response?.statusText,
+        data: err?.response?.data
+      });
+      const errorMessage = err?.response?.data?.message || err?.message || 'İşlem sırasında bir hata oluştu';
       setError(errorMessage);
       setToast({
         message: errorMessage,
@@ -476,6 +664,7 @@ export function useFarmApplications() {
     rejectReason,
     setRejectReason,
     getDocumentReviews,
+    updateDocumentReviews,
     updateDocumentStatus,
     updateDocumentReason,
     updateDocumentAdminNote,
@@ -483,11 +672,14 @@ export function useFarmApplications() {
     closeInspectModal,
     handleApprove,
     handleReject,
+    handleQuickApprove,
+    checkRequiredDocuments,
     loading,
     error,
     loadApplications,
     approvingId,
     rejectingId,
+    updatingDocumentId,
     toast,
     setToast,
   };

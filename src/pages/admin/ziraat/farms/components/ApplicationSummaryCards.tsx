@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ziraatService } from '../../../../../services/ziraatService';
 import type { FarmApplication } from '../types';
 
@@ -13,9 +13,15 @@ function ApplicationSummaryCards({ applications }: ApplicationSummaryCardsProps)
     approved: number;
   } | null>(null);
 
+  // Applications değiştiğinde stats'i yeniden yükle
+  // Sadece uzunluk ve status değişikliklerini izle (gereksiz API çağrılarını önlemek için)
+  const applicationsKey = useMemo(() => {
+    return `${applications.length}-${applications.map(a => `${a.id}:${a.status}`).join(',')}`;
+  }, [applications]);
+
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [applicationsKey]);
 
   const loadStats = async () => {
     try {

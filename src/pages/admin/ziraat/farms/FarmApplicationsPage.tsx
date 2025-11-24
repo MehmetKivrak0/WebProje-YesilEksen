@@ -25,6 +25,7 @@ function FarmApplicationsPage() {
     rejectReason,
     setRejectReason,
     getDocumentReviews,
+    updateDocumentReviews,
     updateDocumentStatus,
     updateDocumentReason,
     updateDocumentAdminNote,
@@ -32,25 +33,20 @@ function FarmApplicationsPage() {
     closeInspectModal,
     handleApprove,
     handleReject,
+    handleQuickApprove,
     loading,
     error,
     approvingId,
     rejectingId,
+    updatingDocumentId,
     toast,
     setToast,
-    loadApplications,
   } = useFarmApplications();
 
   const handleRejectSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (rejectedApplication && rejectReason.trim()) {
       await handleReject(rejectedApplication, rejectReason);
-    }
-  };
-
-  const handleApproveClick = async (application: typeof inspectedApplication) => {
-    if (application) {
-      await handleApprove(application);
     }
   };
 
@@ -101,7 +97,9 @@ function FarmApplicationsPage() {
                 applications={filteredApplications}
                 onInspect={setInspectedApplication}
                 onReject={setRejectedApplication}
+                onQuickApprove={handleQuickApprove}
                 rejectingId={rejectingId}
+                approvingId={approvingId}
               />
             )}
           </div>
@@ -116,15 +114,18 @@ function FarmApplicationsPage() {
           onUpdateDocumentStatus={updateDocumentStatus}
           onUpdateDocumentReason={updateDocumentReason}
           onUpdateDocumentAdminNote={updateDocumentAdminNote}
-          onApprove={(application) => {
-            // Önce tüm reason ve admin note'ları kaydet (zaten yapılıyor InspectModal'da)
+          onApprove={(application, updatedReviews) => {
+            // Eğer güncellenmiş reviews varsa, bunları state'e kaydet
+            if (updatedReviews) {
+              updateDocumentReviews(application.id, updatedReviews);
+            }
             // InspectModal'ı kapat
             setInspectedApplication(null);
             // Sonra ön izleme modal'ını aç
             setPreviewApplication(application);
           }}
           isApproving={approvingId === inspectedApplication.id}
-          onDataUpdated={loadApplications}
+          updatingDocumentId={updatingDocumentId}
           onShowToast={(message, tone) => setToast({ message, tone })}
         />
       )}
@@ -167,7 +168,7 @@ function FarmApplicationsPage() {
         />
       )}
 
-      <FarmToast toast={toast} onClose={() => setToast(null)} />
+      {toast && <FarmToast toast={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }

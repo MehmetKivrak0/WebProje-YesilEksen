@@ -1,18 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import type { DocumentReviewState, FarmApplication } from '../../types';
 import FarmStatusBadge from '../FarmStatusBadge';
-import { ziraatService } from '../../../../../../services/ziraatService';
 
 type InspectModalProps = {
   application: FarmApplication;
   documentReviews: DocumentReviewState;
   onClose: () => void;
-  onUpdateDocumentStatus: (name: string, status: DocumentReviewState[string]['status']) => void;
-  onUpdateDocumentReason: (name: string, reason: string) => void;
+  onUpdateDocumentStatus: (name: string, status: DocumentReviewState[string]['status']) => Promise<void>;
+  onUpdateDocumentReason: (name: string, reason: string, isSent?: boolean) => void;
   onUpdateDocumentAdminNote: (name: string, adminNote: string) => void;
-  onApprove: (application: FarmApplication) => void;
+  onApprove: (application: FarmApplication, updatedReviews?: DocumentReviewState) => void;
   isApproving?: boolean;
-  onDataUpdated?: () => void;
+  updatingDocumentId?: string | null;
   onShowToast?: (message: string, tone: 'success' | 'error') => void;
 };
 
@@ -25,7 +24,7 @@ function InspectModal({
   onUpdateDocumentAdminNote,
   onApprove,
   isApproving = false,
-  onDataUpdated,
+  updatingDocumentId = null,
   onShowToast,
 }: InspectModalProps) {
   const [viewingDocument, setViewingDocument] = useState<{ url: string; name: string } | null>(null);
@@ -37,10 +36,8 @@ function InspectModal({
   // Local state for textarea values to avoid re-renders on every keystroke
   const [localReasons, setLocalReasons] = useState<Record<string, string>>({});
   const [localAdminNotes, setLocalAdminNotes] = useState<Record<string, string>>({});
-  // Track which documents have been saved
+  // Track which documents have been saved (İlet butonuna tıklanan belgeler)
   const [savedDocuments, setSavedDocuments] = useState<Set<string>>(new Set());
-  // Track which documents are being saved to backend
-  const [savingDocuments, setSavingDocuments] = useState<Set<string>>(new Set());
 
   // Değişiklik var mı kontrol et
   const hasChanges = () => {
@@ -109,7 +106,7 @@ function InspectModal({
     }
   };
 
-  // Local state'i documentReviews ile senkronize et
+  // Application değiştiğinde local state'i sıfırla ve ilk değerleri yükle
   useEffect(() => {
     const newLocalReasons: Record<string, string> = {};
     const newLocalAdminNotes: Record<string, string> = {};
@@ -124,7 +121,8 @@ function InspectModal({
     
     setLocalReasons(newLocalReasons);
     setLocalAdminNotes(newLocalAdminNotes);
-  }, [application.documents, documentReviews]);
+    setSavedDocuments(new Set());
+  }, [application.id]); // Sadece application.id değiştiğinde çalış
 
   // Eğer onay işlemi başarılı olursa ve modal kapanırsa, ön izleme modal'ını da kapat
   // (onApprove başarılı olursa zaten setInspectedApplication(null) çağrılacak ve InspectModal kapanacak)
@@ -414,7 +412,7 @@ function InspectModal({
                         
                         <div className="ml-auto flex items-center gap-2">
                           {(() => {
-                            const isDocumentUpdating = false; // Artık belge güncellemeleri direkt backend'e gönderilmiyor
+                            const isDocumentUpdating = document.belgeId ? updatingDocumentId === document.belgeId : false;
                             const isApproved = review.status === 'Onaylandı';
                             const isRejected = review.status === 'Reddedildi';
                             
@@ -444,13 +442,13 @@ function InspectModal({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     // Reason kontrolü - eğer reason yoksa scroll yap
                                     const currentReason = documentReviews[document.name]?.reason;
                                     if (!currentReason || !currentReason.trim()) {
                                       setShouldScrollToReason({ documentName: document.name });
                                     }
-                                    onUpdateDocumentStatus(document.name, 'Reddedildi');
+                                    await onUpdateDocumentStatus(document.name, 'Reddedildi');
                                   }}
                                   disabled={isDocumentUpdating || isRejected || isApproving}
                                   className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -654,88 +652,44 @@ Ziraat Odası İnceleme Birimi`,
                             </button>
                             <button
                               type="button"
-                              onClick={async () => {
-                                const reason = localReasons[document.name] ?? '';
+                              onClick={() => {
+                                // Textarea'dan direkt olarak mevcut değeri al (her zaman en güncel değer)
+                                const textarea = reasonTextareaRefs.current[document.name];
+                                const reason = textarea ? textarea.value : (localReasons[document.name] ?? '');
                                 const adminNote = localAdminNotes[document.name] ?? '';
                                 
-                                if (reason.trim() && document.belgeId) {
-                                  // Reason'u sadece hafızada tut (local state'e kaydet)
-                                  onUpdateDocumentReason(document.name, reason);
+                                if (reason.trim()) {
+                                  // Önce localReasons'ı güncelle (textarea'daki en güncel değerle)
+                                  setLocalReasons((prev) => ({
+                                    ...prev,
+                                    [document.name]: reason,
+                                  }));
                                   
-                                  // Admin note varsa backend'e kaydet
+                                  // Reason'u documentReviews'e kaydet ve "İlet" butonuna tıklandı olarak işaretle
+                                  onUpdateDocumentReason(document.name, reason, true);
+                                  // Admin note varsa documentReviews'e kaydet
                                   if (adminNote.trim()) {
-                                    setSavingDocuments((prev) => new Set(prev).add(document.name));
-                                    
-                                    try {
-                                      const review = documentReviews[document.name];
-                                      const status = review?.status || 'Reddedildi';
-                                      
-                                      const response = await ziraatService.updateDocumentStatus(document.belgeId, {
-                                        status,
-                                        reason: reason.trim(),
-                                        adminNote: adminNote.trim(),
-                                      });
-                                      
-                                      if (response.success) {
-                                        // Admin note'u documentReviews'e kaydet
-                                        onUpdateDocumentAdminNote(document.name, adminNote);
-                                        // Kaydedildi olarak işaretle
-                                        setSavedDocuments((prev) => new Set(prev).add(document.name));
-                                        // Toast bildirimi göster
-                                        if (onShowToast) {
-                                          onShowToast('Admin notu eklendi', 'success');
-                                        }
-                                        // Verileri yenile
-                                        if (onDataUpdated) {
-                                          onDataUpdated();
-                                        }
-                                      } else {
-                                        if (onShowToast) {
-                                          onShowToast('Admin notu kaydedilemedi', 'error');
-                                        }
-                                      }
-                                    } catch (error) {
-                                      console.error('Belge kayıt hatası:', error);
-                                      if (onShowToast) {
-                                        onShowToast('Kayıt sırasında bir hata oluştu', 'error');
-                                      }
-                                    } finally {
-                                      setSavingDocuments((prev) => {
-                                        const newSet = new Set(prev);
-                                        newSet.delete(document.name);
-                                        return newSet;
-                                      });
-                                    }
-                                  } else {
-                                    // Sadece reason var, admin note yok - sadece hafızada tut
-                                    setSavedDocuments((prev) => new Set(prev).add(document.name));
+                                    onUpdateDocumentAdminNote(document.name, adminNote);
+                                  }
+                                  // "İlet" butonuna tıklandı olarak işaretle (UI için)
+                                  setSavedDocuments((prev) => new Set(prev).add(document.name));
+                                  // Toast bildirimi göster
+                                  if (onShowToast) {
+                                    onShowToast('Açıklama hafızaya kaydedildi. Onaylandığında backend\'e gönderilecek.', 'success');
                                   }
                                 }
                               }}
-                              disabled={!localReasons[document.name]?.trim() || isApproving || savingDocuments.has(document.name)}
+                              disabled={isApproving}
                               className={`ml-auto inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                                 savedDocuments.has(document.name)
                                   ? 'bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700'
-                                  : savingDocuments.has(document.name)
-                                  ? 'bg-yellow-500 text-white cursor-wait'
-                                  : localReasons[document.name]?.trim()
-                                  ? 'bg-primary text-white hover:bg-primary/90 dark:bg-primary/80 dark:hover:bg-primary'
-                                  : 'cursor-not-allowed border border-border-light bg-gray-100 text-gray-400 dark:border-border-dark dark:bg-gray-800 dark:text-gray-600'
+                                  : 'bg-primary text-white hover:bg-primary/90 dark:bg-primary/80 dark:hover:bg-primary'
                               }`}
                             >
-                              {savingDocuments.has(document.name) ? (
-                                <>
-                                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                                  <span>Kaydediliyor...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="material-symbols-outlined text-sm">
-                                    {savedDocuments.has(document.name) ? 'check_circle' : 'forward_to_inbox'}
-                                  </span>
-                                  {savedDocuments.has(document.name) ? 'Kaydedildi' : 'İlet'}
-                                </>
-                              )}
+                              <span className="material-symbols-outlined text-sm">
+                                {savedDocuments.has(document.name) ? 'check_circle' : 'forward_to_inbox'}
+                              </span>
+                              {savedDocuments.has(document.name) ? 'Kaydedildi' : 'İlet'}
                             </button>
                           </div>
                           {localReasons[document.name] && (
@@ -776,21 +730,50 @@ Ziraat Odası İnceleme Birimi`,
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               onClick={async () => {
                 // Tüm reason ve admin note'ları documentReviews'e kaydet
-                Object.keys(localReasons).forEach((docName) => {
-                  if (localReasons[docName]?.trim()) {
-                    onUpdateDocumentReason(docName, localReasons[docName]);
+                // Textarea'lardan direkt olarak en güncel değerleri al
+                const updatedReviews: DocumentReviewState = { ...documentReviews };
+                
+                application.documents.forEach((doc) => {
+                  const reasonTextarea = reasonTextareaRefs.current[doc.name];
+                  const reason = reasonTextarea ? reasonTextarea.value.trim() : (localReasons[doc.name] ?? '').trim();
+                  const adminNote = (localAdminNotes[doc.name] ?? '').trim();
+                  
+                  const isSent = savedDocuments.has(doc.name);
+                  const currentReview = updatedReviews[doc.name] || documentReviews[doc.name];
+                  
+                  if (reason) {
+                    // Eğer "İlet" butonuna tıklanmışsa isSent: true gönder
+                    onUpdateDocumentReason(doc.name, reason, isSent);
+                    
+                    // Güncellenmiş reviews'i hazırla
+                    updatedReviews[doc.name] = {
+                      status: currentReview?.status ?? 'Reddedildi',
+                      reason,
+                      adminNote: adminNote || currentReview?.adminNote,
+                      isSent: isSent || currentReview?.isSent || false,
+                    };
+                  } else if (adminNote) {
+                    // Sadece adminNote varsa
+                    onUpdateDocumentAdminNote(doc.name, adminNote);
+                    
+                    // Güncellenmiş reviews'i hazırla
+                    updatedReviews[doc.name] = {
+                      status: currentReview?.status ?? 'Beklemede',
+                      reason: currentReview?.reason,
+                      adminNote,
+                      isSent: currentReview?.isSent || false,
+                    };
+                  } else if (currentReview) {
+                    // Mevcut review'ı koru
+                    updatedReviews[doc.name] = currentReview;
                   }
                 });
-                Object.keys(localAdminNotes).forEach((docName) => {
-                  if (localAdminNotes[docName]?.trim()) {
-                    onUpdateDocumentAdminNote(docName, localAdminNotes[docName]);
-                  }
-                });
+                
                 // State güncellemelerinin tamamlanması için kısa bir gecikme
                 await new Promise(resolve => setTimeout(resolve, 50));
                 // Ön izleme modal'ını açmak için onApprove'u çağır
-                // onApprove callback'i InspectModal'ı kapatacak ve ön izleme modal'ını açacak
-                onApprove(application);
+                // Güncellenmiş documentReviews'i de geç
+                onApprove(application, updatedReviews);
               }}
               disabled={isApproving || application.status === 'Onaylandı' || !hasChanges()}
             >

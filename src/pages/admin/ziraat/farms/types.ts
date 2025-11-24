@@ -15,6 +15,7 @@ export type FarmDocument = {
   belgeId?: string;
   farmerNote?: string;
   adminNote?: string;
+  zorunlu?: boolean;
 };
 
 export type FarmApplication = {
@@ -48,5 +49,5 @@ export type ChangeLogEntry = {
   timestamp: string;
 };
 
-export type DocumentReviewState = Record<string, { status: DocumentStatus; reason?: string; adminNote?: string }>;
+export type DocumentReviewState = Record<string, { status: DocumentStatus; reason?: string; adminNote?: string; isSent?: boolean }>;
 

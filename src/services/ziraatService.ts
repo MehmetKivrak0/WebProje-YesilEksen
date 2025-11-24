@@ -103,13 +103,19 @@ export const ziraatService = {
         if (!cleanId) {
             throw new Error('Geçersiz başvuru ID\'si');
         }
-        const response = await api.post(`/ziraat/farms/${encodeURIComponent(cleanId)}/approve`, data);
+        // data undefined olsa bile boş obje gönder (req.body undefined olmasın)
+        const response = await api.post(`/ziraat/farms/approve/${encodeURIComponent(cleanId)}`, data || {});
         return response.data;
     },
 
     //Çiftlik Başvurusu Reddet
     rejectFarm: async (id: string, data: { reason: string }): Promise<{ success: boolean; message: string }> => {
-        const response = await api.post(`/ziraat/farms/${id}/reject`, data);
+        // ID'yi temizle ve doğrula
+        const cleanId = String(id).trim();
+        if (!cleanId) {
+            throw new Error('Geçersiz başvuru ID\'si');
+        }
+        const response = await api.post(`/ziraat/farms/reject/${encodeURIComponent(cleanId)}`, data);
         return response.data;
     },
 
@@ -172,6 +178,19 @@ export const ziraatService = {
         adminNote?: string;
     }): Promise<{ success: boolean; message: string }> => {
         const response = await api.put(`/ziraat/documents/${belgeId}`, data);
+        return response.data;
+    },
+
+    //Çiftlik Başvuru Durumunu Güncelle
+    updateFarmApplicationStatus: async (id: string, data: { 
+        status: string; 
+        reason?: string;
+    }): Promise<{ success: boolean; message: string }> => {
+        const cleanId = String(id).trim();
+        if (!cleanId) {
+            throw new Error('Geçersiz başvuru ID\'si');
+        }
+        const response = await api.put(`/ziraat/farms/status/${encodeURIComponent(cleanId)}`, data);
         return response.data;
     },
 }
