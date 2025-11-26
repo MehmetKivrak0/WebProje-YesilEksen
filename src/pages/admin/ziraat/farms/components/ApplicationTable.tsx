@@ -77,43 +77,48 @@ function ApplicationTable({
                   >
                     İncele
                   </button>
-                  {onQuickApprove && (
-                    <button
-                      className="rounded-full bg-green-600 px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 dark:hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onQuickApprove(farm);
-                      }}
-                      disabled={rejectingId === farm.id || approvingId === farm.id || farm.status === 'Onaylandı'}
-                    >
-                      {approvingId === farm.id ? (
-                        <>
-                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                          <span>Onaylanıyor...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-base">check_circle</span>
-                          <span>Onayla</span>
-                        </>
+                  {/* Onayla ve Reddet butonları sadece İlk İnceleme ve Belge Eksik durumlarında gösterilir */}
+                  {farm.status !== 'Onaylandı' && farm.status !== 'Reddedildi' && (
+                    <>
+                      {onQuickApprove && (
+                        <button
+                          className="rounded-full bg-green-600 px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 dark:hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onQuickApprove(farm);
+                          }}
+                          disabled={rejectingId === farm.id || approvingId === farm.id}
+                        >
+                          {approvingId === farm.id ? (
+                            <>
+                              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                              <span>Onaylanıyor...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-base">check_circle</span>
+                              <span>Onayla</span>
+                            </>
+                          )}
+                        </button>
                       )}
-                    </button>
+                      <button
+                        className="rounded-full bg-red-600 px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        onClick={() => onReject(farm)}
+                        disabled={rejectingId === farm.id || approvingId === farm.id}
+                      >
+                        {rejectingId === farm.id ? (
+                          <>
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                            <span>Reddediliyor...</span>
+                          </>
+                        ) : (
+                          'Reddet'
+                        )}
+                      </button>
+                    </>
                   )}
-                  <button
-                    className="rounded-full bg-red-600 px-4 py-1 text-sm font-medium text-white transition-colors hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    onClick={() => onReject(farm)}
-                    disabled={rejectingId === farm.id || approvingId === farm.id || farm.status === 'Onaylandı'}
-                  >
-                    {rejectingId === farm.id ? (
-                      <>
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                        <span>Reddediliyor...</span>
-                      </>
-                    ) : (
-                      'Reddet'
-                    )}
-                  </button>
                 </div>
               </td>
             </tr>

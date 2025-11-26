@@ -81,7 +81,7 @@ const mapApiApplicationToFarmApplication = (apiApp: ApiFarmApplication): FarmApp
 };
 
 export function useFarmApplications() {
-  const [selectedStatus, setSelectedStatus] = useState<'Hepsi' | FarmStatus>('Hepsi');
+  const [selectedStatus, setSelectedStatus] = useState<'Hepsi' | FarmStatus>('İlk İnceleme');
   const [records, setRecords] = useState<FarmApplication[]>([]);
   const [allApplications, setAllApplications] = useState<FarmApplication[]>([]); // İstatistikler için tüm başvurular
   const [approvedFarmCount, setApprovedFarmCount] = useState(0);
@@ -110,7 +110,8 @@ export function useFarmApplications() {
       setError(null);
       
       // ciftlik_basvurulari tablosundaki durum değerlerine göre mapping
-      const statusParam = selectedStatus === 'Hepsi' ? undefined : 
+      // "Hepsi" seçildiğinde 'all' gönder, backend tüm durumları gösterecek
+      const statusParam = selectedStatus === 'Hepsi' ? 'all' : 
         selectedStatus === 'İlk İnceleme' ? 'ilk_inceleme' :
         selectedStatus === 'Onaylandı' ? 'onaylandi' :
         selectedStatus === 'Reddedildi' ? 'reddedildi' :

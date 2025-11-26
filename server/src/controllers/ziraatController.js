@@ -342,16 +342,20 @@ const getFarmApplications = async (req, res) => {
 
         // Durum filtresi - ciftlik_basvurulari tablosundaki durum değerleri
         // Frontend mapping: 'ilk_inceleme' -> 'İlk İnceleme', 'onaylandi' -> 'Onaylandı', 'reddedildi' -> 'Reddedildi'
-        if (status) {
+        // 'all' -> Tüm durumlar (Hepsi filtresi)
+        if (status && status !== 'all') {
+            // Belirli bir durum seçildiğinde
             whereClause += ` AND cb.durum = $${paramIndex}`;
             params.push(status);
             paramIndex++;
-        } else {
-            // Durum filtresi yoksa onay bekleyen, reddedilen ve belge eksik başvuruları göster
+        } else if (!status) {
+            // Durum filtresi yoksa (varsayılan) sadece onay bekleyen ve belge eksik başvuruları göster
+            // Reddedilen başvurular sadece "Reddedildi" filtresi seçildiğinde gösterilir
             // Onaylanmış başvurular (durum = 'onaylandi') varsayılan olarak gösterilmez
             // çünkü bunlar ciftlikler tablosunda zaten aktif çiftlik olarak var
-            whereClause += ` AND cb.durum IN ('ilk_inceleme', 'reddedildi', 'belge_eksik')`;
+            whereClause += ` AND cb.durum IN ('ilk_inceleme', 'belge_eksik')`;
         }
+        // status === 'all' ise durum filtresi ekleme (tüm durumlar gösterilecek)
 
         if (search) {
             whereClause += ` AND (cb.ciftlik_adi ILIKE $${paramIndex} OR cb.sahip_adi ILIKE $${paramIndex} OR COALESCE(k.ad, '') ILIKE $${paramIndex} OR COALESCE(k.soyad, '') ILIKE $${paramIndex} OR cb.id::text ILIKE $${paramIndex})`;
