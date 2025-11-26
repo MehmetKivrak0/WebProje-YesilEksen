@@ -116,22 +116,6 @@ function FarmApplicationsPage() {
           application={inspectedApplication}
           documentReviews={getDocumentReviews(inspectedApplication.id)}
           onClose={closeInspectModal}
-          onUpdateDocumentStatus={updateDocumentStatus}
-          onUpdateDocumentReason={updateDocumentReason}
-          onUpdateDocumentAdminNote={updateDocumentAdminNote}
-          onApprove={(application, updatedReviews) => {
-            // Eğer güncellenmiş reviews varsa, bunları state'e kaydet
-            if (updatedReviews) {
-              updateDocumentReviews(application.id, updatedReviews);
-            }
-            // InspectModal'ı kapat
-            setInspectedApplication(null);
-            // Sonra ön izleme modal'ını aç
-            setPreviewApplication(application);
-          }}
-          isApproving={approvingId === inspectedApplication.id}
-          updatingDocumentId={updatingDocumentId}
-          onShowToast={(message, tone) => setToast({ message, tone })}
         />
       )}
 

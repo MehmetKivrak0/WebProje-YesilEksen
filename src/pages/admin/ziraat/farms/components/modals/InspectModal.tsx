@@ -6,12 +6,11 @@ type InspectModalProps = {
   application: FarmApplication;
   documentReviews: DocumentReviewState;
   onClose: () => void;
-  onUpdateDocumentStatus: (name: string, status: DocumentReviewState[string]['status']) => Promise<void>;
+  onUpdateDocumentStatus: (name: string, status: DocumentReviewState[string]['status']) => void;
   onUpdateDocumentReason: (name: string, reason: string, isSent?: boolean) => void;
   onUpdateDocumentAdminNote: (name: string, adminNote: string) => void;
-  onApprove: (application: FarmApplication, updatedReviews?: DocumentReviewState) => void;
+  onApprove: (application: FarmApplication) => void;
   isApproving?: boolean;
-  updatingDocumentId?: string | null;
   onShowToast?: (message: string, tone: 'success' | 'error') => void;
 };
 
@@ -24,7 +23,6 @@ function InspectModal({
   onUpdateDocumentAdminNote,
   onApprove,
   isApproving = false,
-  updatingDocumentId = null,
   onShowToast,
 }: InspectModalProps) {
   const [viewingDocument, setViewingDocument] = useState<{ url: string; name: string } | null>(null);
@@ -296,29 +294,6 @@ function InspectModal({
                   status: document.status,
                   reason: document.farmerNote,
                 };
-                const statusConfig = {
-                  'Onaylandı': { 
-                    class: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
-                    icon: 'check_circle',
-                    dot: 'bg-green-500'
-                  },
-                  'Eksik': { 
-                    class: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
-                    icon: 'error',
-                    dot: 'bg-red-500'
-                  },
-                  'Reddedildi': { 
-                    class: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
-                    icon: 'cancel',
-                    dot: 'bg-red-500'
-                  },
-                  'Beklemede': { 
-                    class: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
-                    icon: 'schedule',
-                    dot: 'bg-yellow-500'
-                  },
-                };
-                const status = statusConfig[review.status as keyof typeof statusConfig] ?? statusConfig['Beklemede'];
                 
                 // Dosya adını URL'den çıkar - URL formatı: /api/documents/file/farmer/filename.png veya tam URL
                 let fileName: string | null = null;
@@ -348,41 +323,34 @@ function InspectModal({
                     className="group relative overflow-hidden rounded-xl border border-border-light bg-background-light shadow-sm transition-all hover:shadow-md dark:border-border-dark dark:bg-background-dark"
                   >
                     <div className="p-5">
-                      {/* Belge Başlık ve Durum */}
-                      <div className="mb-4 flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="mb-2 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-subtle-light dark:text-subtle-dark flex-shrink-0 text-xl">description</span>
-                            <h4 className="font-semibold text-content-light dark:text-content-dark text-base">{document.name}</h4>
-                          </div>
-                          {fileName && (
-                            <div className="ml-8 flex items-center gap-2 text-xs text-subtle-light dark:text-subtle-dark">
-                              <span className="material-symbols-outlined text-sm">attach_file</span>
-                              <span className="truncate font-mono" title={fileName}>
-                                {truncatedFileName}
+                      {/* Belge Başlık */}
+                      <div className="mb-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-subtle-light dark:text-subtle-dark flex-shrink-0 text-xl">description</span>
+                          <h4 className="font-semibold text-content-light dark:text-content-dark text-base">{document.name}</h4>
+                        </div>
+                        {fileName && (
+                          <div className="ml-8 flex items-center gap-2 text-xs text-subtle-light dark:text-subtle-dark">
+                            <span className="material-symbols-outlined text-sm">attach_file</span>
+                            <span className="truncate font-mono" title={fileName}>
+                              {truncatedFileName}
+                            </span>
+                            {/* Dosya tipi ikonu */}
+                            {fileName && (
+                              <span className="ml-1 text-subtle-light dark:text-subtle-dark">
+                                {fileName.toLowerCase().endsWith('.pdf') && '📄'}
+                                {(fileName.toLowerCase().endsWith('.png') || fileName.toLowerCase().endsWith('.jpg') || fileName.toLowerCase().endsWith('.jpeg')) && '🖼️'}
+                                {fileName.toLowerCase().endsWith('.doc') || fileName.toLowerCase().endsWith('.docx') ? '📝' : ''}
                               </span>
-                              {/* Dosya tipi ikonu */}
-                              {fileName && (
-                                <span className="ml-1 text-subtle-light dark:text-subtle-dark">
-                                  {fileName.toLowerCase().endsWith('.pdf') && '📄'}
-                                  {(fileName.toLowerCase().endsWith('.png') || fileName.toLowerCase().endsWith('.jpg') || fileName.toLowerCase().endsWith('.jpeg')) && '🖼️'}
-                                  {fileName.toLowerCase().endsWith('.doc') || fileName.toLowerCase().endsWith('.docx') ? '📝' : ''}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {!document.url && (
-                            <div className="ml-8 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                              <span className="material-symbols-outlined text-sm">warning</span>
-                              <span>Belge henüz yüklenmemiş</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${status.class}`}>
-                          <span className={`h-2 w-2 rounded-full ${status.dot} animate-pulse`}></span>
-                          <span className="material-symbols-outlined text-sm">{status.icon}</span>
-                          <span>{review.status}</span>
-                        </div>
+                            )}
+                          </div>
+                        )}
+                        {!document.url && (
+                          <div className="ml-8 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                            <span className="material-symbols-outlined text-sm">warning</span>
+                            <span>Belge henüz yüklenmemiş</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Aksiyon Butonları */}
@@ -409,125 +377,6 @@ function InspectModal({
                             </button>
                           </>
                         )}
-                        
-                        <div className="ml-auto flex items-center gap-2">
-                          {(() => {
-                            const isDocumentUpdating = document.belgeId ? updatingDocumentId === document.belgeId : false;
-                            const isApproved = review.status === 'Onaylandı';
-                            const isRejected = review.status === 'Reddedildi';
-                            const hasDocumentId = !!document.belgeId;
-                            const hasDocumentUrl = !!document.url;
-                            
-                            // Belge ID veya URL eksikse hata mesajı göster
-                            if (!hasDocumentId && !hasDocumentUrl) {
-                              return (
-                                <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                                  <span className="material-symbols-outlined text-sm">warning</span>
-                                  <span>Belge bilgisi eksik</span>
-                                </div>
-                              );
-                            }
-                            
-                            // Belge ID eksikse butonları disabled yap ve uyarı göster
-                            if (!hasDocumentId) {
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-sm">warning</span>
-                                    <span>Belge ID eksik</span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    disabled={true}
-                                    title="Belge ID eksik olduğu için işlem yapılamıyor"
-                                    className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm bg-gray-400 cursor-not-allowed opacity-50"
-                                  >
-                                    <span className="material-symbols-outlined text-base">check_circle</span>
-                                    <span>Onayla</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={true}
-                                    title="Belge ID eksik olduğu için işlem yapılamıyor"
-                                    className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold border-2 border-gray-400 bg-white text-gray-400 cursor-not-allowed opacity-50"
-                                  >
-                                    <span className="material-symbols-outlined text-base">cancel</span>
-                                    <span>Reddet</span>
-                                  </button>
-                                </div>
-                              );
-                            }
-                            
-                            return (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    console.log('🟢 Onayla butonu tıklandı:', {
-                                      belgeAdi: document.name,
-                                      belgeId: document.belgeId,
-                                      mevcutDurum: review.status
-                                    });
-                                    onUpdateDocumentStatus(document.name, 'Onaylandı');
-                                  }}
-                                  disabled={isDocumentUpdating || isApproved || isApproving}
-                                  className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                    isApproved
-                                      ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'
-                                      : 'bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700'
-                                  }`}
-                                >
-                                  {isDocumentUpdating && !isApproved ? (
-                                    <>
-                                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                                      <span>Onaylanıyor...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="material-symbols-outlined text-base">check_circle</span>
-                                      <span>{isApproved ? 'Onaylandı' : 'Onayla'}</span>
-                                    </>
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    console.log('🔴 Reddet butonu tıklandı:', {
-                                      belgeAdi: document.name,
-                                      belgeId: document.belgeId,
-                                      mevcutDurum: review.status,
-                                      redNedeni: documentReviews[document.name]?.reason
-                                    });
-                                    // Reason kontrolü - eğer reason yoksa scroll yap
-                                    const currentReason = documentReviews[document.name]?.reason;
-                                    if (!currentReason || !currentReason.trim()) {
-                                      setShouldScrollToReason({ documentName: document.name });
-                                    }
-                                    await onUpdateDocumentStatus(document.name, 'Reddedildi');
-                                  }}
-                                  disabled={isDocumentUpdating || isRejected || isApproving}
-                                  className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                    isRejected
-                                      ? 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800'
-                                      : 'border-2 border-red-500 bg-white text-red-600 hover:bg-red-50 dark:border-red-500 dark:bg-background-dark dark:text-red-400 dark:hover:bg-red-900/20'
-                                  }`}
-                                >
-                                  {isDocumentUpdating && !isRejected ? (
-                                    <>
-                                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent"></span>
-                                      <span>Reddediliyor...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="material-symbols-outlined text-base">cancel</span>
-                                      <span>{isRejected ? 'Reddedildi' : 'Reddet'}</span>
-                                    </>
-                                  )}
-                                </button>
-                              </>
-                            );
-                          })()}
-                        </div>
                       </div>
 
                       {/* Reddetme Açıklama Formu */}
@@ -775,74 +624,10 @@ Ziraat Odası İnceleme Birimi`,
 
           <div className="flex items-center justify-end gap-3">
             <button
-              className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg border-2 border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all"
               onClick={onClose}
-              disabled={isApproving}
             >
               Kapat
-            </button>
-            <button 
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              onClick={async () => {
-                // Tüm reason ve admin note'ları documentReviews'e kaydet
-                // Textarea'lardan direkt olarak en güncel değerleri al
-                const updatedReviews: DocumentReviewState = { ...documentReviews };
-                
-                application.documents.forEach((doc) => {
-                  const reasonTextarea = reasonTextareaRefs.current[doc.name];
-                  const reason = reasonTextarea ? reasonTextarea.value.trim() : (localReasons[doc.name] ?? '').trim();
-                  const adminNote = (localAdminNotes[doc.name] ?? '').trim();
-                  
-                  const isSent = savedDocuments.has(doc.name);
-                  const currentReview = updatedReviews[doc.name] || documentReviews[doc.name];
-                  
-                  if (reason) {
-                    // Eğer "İlet" butonuna tıklanmışsa isSent: true gönder
-                    onUpdateDocumentReason(doc.name, reason, isSent);
-                    
-                    // Güncellenmiş reviews'i hazırla
-                    updatedReviews[doc.name] = {
-                      status: currentReview?.status ?? 'Reddedildi',
-                      reason,
-                      adminNote: adminNote || currentReview?.adminNote,
-                      isSent: isSent || currentReview?.isSent || false,
-                    };
-                  } else if (adminNote) {
-                    // Sadece adminNote varsa
-                    onUpdateDocumentAdminNote(doc.name, adminNote);
-                    
-                    // Güncellenmiş reviews'i hazırla
-                    updatedReviews[doc.name] = {
-                      status: currentReview?.status ?? 'Beklemede',
-                      reason: currentReview?.reason,
-                      adminNote,
-                      isSent: currentReview?.isSent || false,
-                    };
-                  } else if (currentReview) {
-                    // Mevcut review'ı koru
-                    updatedReviews[doc.name] = currentReview;
-                  }
-                });
-                
-                // State güncellemelerinin tamamlanması için kısa bir gecikme
-                await new Promise(resolve => setTimeout(resolve, 50));
-                // Ön izleme modal'ını açmak için onApprove'u çağır
-                // Güncellenmiş documentReviews'i de geç
-                onApprove(application, updatedReviews);
-              }}
-              disabled={isApproving || application.status === 'Onaylandı' || !hasChanges()}
-            >
-              {isApproving ? (
-                <>
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                  <span>Onaylanıyor...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-base">check_circle</span>
-                  <span>Onayla</span>
-                </>
-              )}
             </button>
           </div>
         </div>

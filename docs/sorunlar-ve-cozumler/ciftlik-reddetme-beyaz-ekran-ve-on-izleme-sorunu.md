@@ -145,3 +145,6 @@ Kullanılmayan değişkenler kaldırıldı:
 
 
 
+
+
+
