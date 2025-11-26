@@ -1,6 +1,6 @@
 export type DocumentStatus = 'Onaylandı' | 'Eksik' | 'Beklemede' | 'Reddedildi';
 
-export type FarmStatus = 'Onaylandı' | 'Belge Eksik' | 'Evrak Bekliyor' | 'İlk İnceleme' | 'Aktif' | 'Beklemede' | 'Askıda';
+export type FarmStatus = 'Onaylandı' | 'Reddedildi' | 'İlk İnceleme' | 'Belge Eksik' | 'Aktif' | 'Beklemede' | 'Askıda';
 
 export type FarmContact = {
   name: string;

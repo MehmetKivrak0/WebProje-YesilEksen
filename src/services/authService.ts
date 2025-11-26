@@ -64,6 +64,7 @@ export interface ResetPasswordData {
 
 export interface CheckEmailData {
     email: string;
+    checkType?: 'availability'; // E-posta kontrolü için
 }
 
 export const authService = {

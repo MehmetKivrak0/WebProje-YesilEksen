@@ -19,6 +19,7 @@ type LogEntry = {
   old_value?: string;
   new_value?: string;
   reason?: string;
+  farm_name?: string;
 };
 
 function FarmLogModal({ applicationId, onClose }: FarmLogModalProps) {
@@ -27,6 +28,7 @@ function FarmLogModal({ applicationId, onClose }: FarmLogModalProps) {
     detailedActivities: LogEntry[];
     changeLogs: LogEntry[];
   } | null>(null);
+  const [farmName, setFarmName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +45,9 @@ function FarmLogModal({ applicationId, onClose }: FarmLogModalProps) {
         : await ziraatService.getAllFarmLogs();
       if (response.success) {
         setLogs(response.logs);
+        if ('farmName' in response && response.farmName) {
+          setFarmName(response.farmName);
+        }
       } else {
         setError('Loglar yüklenemedi');
       }
@@ -69,6 +74,43 @@ function FarmLogModal({ applicationId, onClose }: FarmLogModalProps) {
     }
   };
 
+  const translateStatus = (status: string | undefined): string => {
+    if (!status) return '';
+    const statusMap: Record<string, string> = {
+      'ilk_inceleme': 'İlk İnceleme',
+      'onaylandi': 'Onaylandı',
+      'reddedildi': 'Reddedildi',
+      'belge_eksik': 'Belge Eksik',
+      'evrak_bekliyor': 'Reddedildi',
+      'beklemede': 'Beklemede',
+      'aktif': 'Aktif',
+      'pasif': 'Pasif',
+    };
+    return statusMap[status.toLowerCase()] || status;
+  };
+
+  const formatLogMessage = (log: LogEntry & { source?: string }) => {
+    // Her log entry'sinin kendi farm_name'i varsa onu kullan, yoksa genel farmName'i kullan
+    const farmNameText = log.farm_name || farmName || 'Çiftlik';
+    const dateText = formatDate(log.timestamp);
+    
+    if (log.type === 'onay') {
+      return `${farmNameText} çiftliği ${dateText} tarihinde onaylandı`;
+    } else if (log.type === 'red') {
+      return `${farmNameText} çiftliği ${dateText} tarihinde reddedildi`;
+    } else if (log.old_status && log.new_status) {
+      const oldStatusTr = translateStatus(log.old_status);
+      const newStatusTr = translateStatus(log.new_status);
+      return `${farmNameText} çiftliğinin durumu ${dateText} tarihinde "${oldStatusTr}" durumundan "${newStatusTr}" durumuna değiştirildi`;
+    } else if (log.field_name && log.old_value !== undefined && log.new_value !== undefined) {
+      const oldValueTr = log.field_name === 'durum' ? translateStatus(log.old_value) : log.old_value;
+      const newValueTr = log.field_name === 'durum' ? translateStatus(log.new_value) : log.new_value;
+      return `${farmNameText} çiftliğinin ${log.field_name} alanı ${dateText} tarihinde "${oldValueTr || 'Boş'}" değerinden "${newValueTr || 'Boş'}" değerine değiştirildi`;
+    } else {
+      return `${farmNameText} çiftliği ile ilgili işlem ${dateText} tarihinde gerçekleştirildi`;
+    }
+  };
+
   const getTypeColor = (type: string) => {
     switch (type?.toLowerCase()) {
       case 'onay':
@@ -82,12 +124,48 @@ function FarmLogModal({ applicationId, onClose }: FarmLogModalProps) {
     }
   };
 
-  // Tüm logları birleştir ve tarihe göre sırala
-  const allLogs: (LogEntry & { source?: string })[] = [
-    ...(logs?.activities || []).map((log) => ({ ...log, source: 'activity' })),
-    ...(logs?.detailedActivities || []).map((log) => ({ ...log, source: 'detailed' })),
-    ...(logs?.changeLogs || []).map((log) => ({ ...log, source: 'change' })),
-  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  // Tüm logları birleştir, duplicate'leri kaldır ve tarihe göre sırala
+  // Öncelik: detayli_aktiviteler > changeLogs > activities (daha detaylı olan öncelikli)
+  const allLogsMap = new Map<string, LogEntry & { source?: string }>();
+  
+  // Önce activities ekle
+  (logs?.activities || []).forEach((log) => {
+    const key = `${log.type}_${log.timestamp}_${log.id}`;
+    if (!allLogsMap.has(key)) {
+      allLogsMap.set(key, { ...log, source: 'activity' });
+    }
+  });
+  
+  // Sonra changeLogs ekle (activities'i override edebilir)
+  (logs?.changeLogs || []).forEach((log) => {
+    const key = `${log.type || 'change'}_${log.timestamp}_${log.id}`;
+    allLogsMap.set(key, { ...log, source: 'change' });
+  });
+  
+  // En son detayli_aktiviteler ekle (en detaylı, diğerlerini override eder)
+  (logs?.detailedActivities || []).forEach((log) => {
+    // Aynı timestamp ve type'a sahip log'u bul ve override et
+    const existingKey = Array.from(allLogsMap.keys()).find(k => {
+      const existingLog = allLogsMap.get(k);
+      if (!existingLog) return false;
+      // Aynı timestamp ve type'a sahip mi kontrol et
+      const timeDiff = Math.abs(new Date(existingLog.timestamp).getTime() - new Date(log.timestamp).getTime());
+      return existingLog.type === log.type && timeDiff < 1000; // 1 saniye içinde
+    });
+    
+    if (existingKey) {
+      // Mevcut log'u detaylı olanla değiştir
+      allLogsMap.set(existingKey, { ...log, source: 'detailed' });
+    } else {
+      // Yeni log ekle
+      const key = `${log.type}_${log.timestamp}_${log.id}`;
+      allLogsMap.set(key, { ...log, source: 'detailed' });
+    }
+  });
+  
+  const allLogs = Array.from(allLogsMap.values()).sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 px-4 py-8">
@@ -138,32 +216,16 @@ function FarmLogModal({ applicationId, onClose }: FarmLogModalProps) {
                         <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getTypeColor(log.type)}`}>
                           {log.type === 'onay' ? 'Onaylandı' : log.type === 'red' ? 'Reddedildi' : log.type || 'İşlem'}
                         </span>
-                        <span className="text-sm font-medium text-content-light dark:text-content-dark">
-                          {log.title || log.field_name || 'İşlem'}
-                        </span>
                       </div>
 
-                      {log.description && (
+                      <p className="text-sm font-medium text-content-light dark:text-content-dark">
+                        {formatLogMessage(log)}
+                      </p>
+
+                      {log.description && log.description.trim() && (
                         <p className="text-sm text-subtle-light dark:text-subtle-dark">{log.description}</p>
                       )}
 
-                      {log.old_status && log.new_status && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-subtle-light dark:text-subtle-dark">Durum:</span>
-                          <span className="font-medium text-red-600 dark:text-red-400">{log.old_status}</span>
-                          <span className="text-subtle-light dark:text-subtle-dark">→</span>
-                          <span className="font-medium text-green-600 dark:text-green-400">{log.new_status}</span>
-                        </div>
-                      )}
-
-                      {log.field_name && log.old_value !== undefined && log.new_value !== undefined && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-subtle-light dark:text-subtle-dark">{log.field_name}:</span>
-                          <span className="font-medium text-red-600 dark:text-red-400">{log.old_value || 'Boş'}</span>
-                          <span className="text-subtle-light dark:text-subtle-dark">→</span>
-                          <span className="font-medium text-green-600 dark:text-green-400">{log.new_value || 'Boş'}</span>
-                        </div>
-                      )}
 
                       {log.reason && (
                         <div className="mt-2 rounded-lg border border-border-light bg-background-light p-2 dark:border-border-dark dark:bg-background-dark">

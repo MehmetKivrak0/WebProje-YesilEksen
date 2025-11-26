@@ -7,17 +7,15 @@ type ApplicationSummaryCardsProps = {
 };
 
 function ApplicationSummaryCards({ applications, approvedFarmCount }: ApplicationSummaryCardsProps) {
-  const { pendingCount, approvedCount, missingDocumentsCount } = useMemo(() => {
+  const { pendingCount, approvedCount, rejectedCount } = useMemo(() => {
     const pending = applications.filter((farm) => farm.status === 'İlk İnceleme').length;
     const approved = applications.filter((farm) => farm.status === 'Onaylandı').length;
-    const missing = applications.filter(
-      (farm) => farm.status === 'Belge Eksik' || farm.status === 'Evrak Bekliyor',
-    ).length;
+    const rejected = applications.filter((farm) => farm.status === 'Reddedildi').length;
 
     return {
       pendingCount: pending,
       approvedCount: approved,
-      missingDocumentsCount: missing,
+      rejectedCount: rejected,
     };
   }, [applications]);
 
@@ -35,9 +33,9 @@ function ApplicationSummaryCards({ applications, approvedFarmCount }: Applicatio
         : 'Toplam onaylanan çiftlik sayısı',
     },
     {
-      label: 'Belge Eksik',
-      value: missingDocumentsCount,
-      description: 'Belgesi eksik olan başvurular',
+      label: 'Reddedilen Başvurular',
+      value: rejectedCount,
+      description: 'Reddedilmiş başvurular',
     },
   ];
 

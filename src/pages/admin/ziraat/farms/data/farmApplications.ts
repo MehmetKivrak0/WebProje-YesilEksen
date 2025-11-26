@@ -44,7 +44,7 @@ export const initialFarmApplications: FarmApplication[] = [
     farm: 'Pamukova Tarım',
     owner: 'Selim Demirtaş',
     location: 'Sakarya, Pamukova',
-    status: 'Belge Eksik',
+    status: 'Evrak Bekliyor',
     lastUpdate: '3 gün önce',
     notes: 'Analiz raporu eksik.',
     contact: {

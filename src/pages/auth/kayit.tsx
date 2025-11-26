@@ -55,6 +55,11 @@ function Kayit() {
     hasLowerCase: false,
     hasNumber: false,
   });
+  const [emailCheck, setEmailCheck] = useState<{
+    status: 'idle' | 'checking' | 'available' | 'duplicate' | 'error';
+    message?: string;
+    checkedEmail?: string;
+  }>({ status: 'idle' });
 
   // URL parametrelerinden gelen verileri formData'ya yükle
   useEffect(() => {
@@ -131,6 +136,11 @@ function Kayit() {
     if (name === 'password' && type !== 'file') {
       validatePassword(value);
     }
+
+    if (name === 'email') {
+      // E-posta değiştiğinde önceki kontrol sonuçlarını sıfırla
+      setEmailCheck({ status: 'idle' });
+    }
     
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
@@ -204,6 +214,96 @@ function Kayit() {
     }
   };
 
+  const checkEmailAvailability = async (email: string) => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setEmailCheck({ status: 'idle' });
+      return 'idle' as const;
+    }
+
+    if (
+      emailCheck.checkedEmail === trimmedEmail &&
+      (emailCheck.status === 'available' || emailCheck.status === 'duplicate')
+    ) {
+      return emailCheck.status;
+    }
+
+    setEmailCheck({ status: 'checking', checkedEmail: trimmedEmail });
+
+    try {
+      const response = await authService.checkEmail({ email: trimmedEmail, checkType: 'availability' });
+      
+      // Backend'den available bilgisi geliyor
+      if (response.available === true) {
+        const availableState = { 
+          status: 'available' as const, 
+          checkedEmail: trimmedEmail,
+          message: 'Bu e-posta ile kayıt olabilirsiniz'
+        };
+        setEmailCheck(availableState);
+        return availableState.status;
+      } else if (response.available === false) {
+        // E-posta zaten kayıtlı
+        const duplicateState = {
+          status: 'duplicate' as const,
+          checkedEmail: trimmedEmail,
+          message: 'Bu e-posta adresi zaten kayıtlı. Lütfen farklı bir e-posta kullanın.',
+        };
+        setEmailCheck(duplicateState);
+        return duplicateState.status;
+      } else {
+        // Response'da available field'ı yoksa (eski backend versiyonu veya hata)
+        // Bu durumda response.success'e bak
+        if (response.success === true) {
+          // E-posta kullanılabilir (eski mantık: 404 gelmediyse kullanılabilir)
+          const availableState = { 
+            status: 'available' as const, 
+            checkedEmail: trimmedEmail,
+            message: 'Bu e-posta ile kayıt olabilirsiniz'
+          };
+          setEmailCheck(availableState);
+          return availableState.status;
+        }
+        // Diğer durumlar için duplicate kabul et
+        const duplicateState = {
+          status: 'duplicate' as const,
+          checkedEmail: trimmedEmail,
+          message: 'Bu e-posta adresi zaten kayıtlı. Lütfen farklı bir e-posta kullanın.',
+        };
+        setEmailCheck(duplicateState);
+        return duplicateState.status;
+      }
+    } catch (err: any) {
+      // 404 hatası e-posta kontrolü için aslında "kullanılabilir" demektir
+      if (err.response?.status === 404) {
+        const availableState = { 
+          status: 'available' as const, 
+          checkedEmail: trimmedEmail,
+          message: 'Bu e-posta ile kayıt olabilirsiniz'
+        };
+        setEmailCheck(availableState);
+        return availableState.status;
+      }
+      
+      // Diğer hatalar için
+      const errorMessage = err.response?.data?.message || 'E-posta kontrolü sırasında bir hata oluştu.';
+      setEmailCheck({
+        status: 'error',
+        checkedEmail: trimmedEmail,
+        message: errorMessage,
+      });
+      return 'error' as const;
+    }
+  };
+
+  const handleEmailBlur = async () => {
+    if (!formData.email) {
+      setEmailCheck({ status: 'idle' });
+      return;
+    }
+    await checkEmailAvailability(formData.email);
+  };
+
   const handleWasteTypeChange = (wasteType: string) => {
     setFormData(prev => ({
       ...prev,
@@ -213,7 +313,7 @@ function Kayit() {
     }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 1) {
       const provider = searchParams.get('provider');
       // Sosyal medya girişi ile geliyorsa şifre zorunlu değil
@@ -227,6 +327,29 @@ function Kayit() {
           isVisible: true
         });
         return;
+      }
+      
+      // E-posta kontrolü - zaten kayıtlı mı?
+      if (formData.email) {
+        const emailStatus = await checkEmailAvailability(formData.email);
+        if (emailStatus === 'duplicate') {
+          setError('Lütfen Yeni Eposta ile devam ediniz');
+          setToast({
+            message: 'Lütfen Yeni Eposta ile devam ediniz',
+            type: 'error',
+            isVisible: true
+          });
+          return;
+        }
+        if (emailStatus === 'error') {
+          setError(emailCheck.message || 'E-posta kontrolü sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+          setToast({
+            message: emailCheck.message || 'E-posta kontrolü sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+            type: 'error',
+            isVisible: true
+          });
+          return;
+        }
       }
       
       if (isPasswordRequired && !formData.password) {
@@ -289,6 +412,25 @@ function Kayit() {
           setLoading(false);
           return;
         }
+      }
+
+      // E-posta daha önce kullanılmış mı kontrol et
+      const emailStatus = await checkEmailAvailability(formData.email);
+      if (emailStatus === 'duplicate') {
+        const duplicateMessage = 'Lütfen Yeni Eposta ile devam ediniz';
+        setError(duplicateMessage);
+        setToast({
+          message: duplicateMessage,
+          type: 'error',
+          isVisible: true,
+        });
+        setLoading(false);
+        return;
+      }
+      if (emailStatus === 'error') {
+        setError(emailCheck.message || 'E-posta kontrolü sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+        setLoading(false);
+        return;
       }
 
       // Zorunlu belgeler kontrolü
@@ -399,15 +541,40 @@ function Kayit() {
         navigate('/giris');
       }, 2000);
     } catch (err: any) {
+      console.error('❌ Kayıt hatası:', err);
+      console.error('Hata detayları:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
+      
       const errorMessage = err.response?.data?.message || 'Kayıt başarısız';
       const missingFields = err.response?.data?.missing;
+      const errorField = err.response?.data?.field;
       
       if (missingFields) {
         const missingList = Object.entries(missingFields)
           .filter(([_, isMissing]) => isMissing)
-          .map(([field]) => field)
+          .map(([field]) => {
+            // Türkçe alan isimleri
+            const fieldNames: Record<string, string> = {
+              firstName: 'Ad',
+              lastName: 'Soyad',
+              email: 'E-posta',
+              userType: 'Kullanıcı Tipi',
+              phone: 'Telefon'
+            };
+            return fieldNames[field] || field;
+          })
           .join(', ');
         setError(`${errorMessage} (Eksik alanlar: ${missingList})`);
+      } else if (errorField) {
+        const fieldNames: Record<string, string> = {
+          password: 'Şifre',
+          email: 'E-posta'
+        };
+        const fieldName = fieldNames[errorField] || errorField;
+        setError(`${errorMessage} (${fieldName})`);
       } else {
         setError(errorMessage);
       }
@@ -570,10 +737,27 @@ function Kayit() {
                       readOnly={!!searchParams.get('provider')}
                       value={formData.email}
                       onChange={handleInputChange}
+                      onBlur={searchParams.get('provider') ? undefined : handleEmailBlur}
                       className={`w-full pl-10 pr-4 py-3 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary focus:border-primary transition-colors ${searchParams.get('provider') ? 'opacity-75 cursor-not-allowed' : ''}`}
                       placeholder="E-posta adresiniz"
                     />
                   </div>
+                  {!searchParams.get('provider') && (
+                    <>
+                      {emailCheck.status === 'checking' && (
+                        <p className="mt-2 text-sm text-subtle-light dark:text-subtle-dark">E-posta kontrol ediliyor...</p>
+                      )}
+                      {emailCheck.status === 'available' && (
+                        <p className="mt-2 text-sm text-green-600 dark:text-green-400">{emailCheck.message || 'Bu e-posta ile kayıt olabilirsiniz'}</p>
+                      )}
+                      {emailCheck.status === 'duplicate' && (
+                        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{emailCheck.message}</p>
+                      )}
+                      {emailCheck.status === 'error' && (
+                        <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">{emailCheck.message}</p>
+                      )}
+                    </>
+                  )}
                 </div>  
 
                 {/* Şifre */}

@@ -87,26 +87,43 @@ const register = async (req, res) => {
         }
 
         // Validasyon - FormData'dan gelen değerler string olabilir
-        if (!firstName || !lastName || !email || !userType || !phone) {
+        // Trim işlemi yaparak boş string kontrolü de yapıyoruz
+        const trimmedFirstName = firstName?.trim();
+        const trimmedLastName = lastName?.trim();
+        const trimmedEmail = email?.trim();
+        const trimmedPhone = phone?.trim();
+        
+        if (!trimmedFirstName || !trimmedLastName || !trimmedEmail || !userType || !trimmedPhone) {
             return res.status(400).json({
                 success: false,
                 message: 'Tüm alanları doldurunuz',
                 missing: {
-                    firstName: !firstName,
-                    lastName: !lastName,
-                    email: !email,
+                    firstName: !trimmedFirstName,
+                    lastName: !trimmedLastName,
+                    email: !trimmedEmail,
                     userType: !userType,
-                    phone: !phone
+                    phone: !trimmedPhone
                 }
             });
         }
 
         // Şifre kontrolü - Sosyal medya girişi için opsiyonel olabilir
         // Ama normal kayıt için zorunlu
-        if (!password || password.trim() === '') {
+        const trimmedPassword = password?.trim();
+        if (!trimmedPassword || trimmedPassword === '') {
             return res.status(400).json({
                 success: false,
-                message: 'Şifre gereklidir'
+                message: 'Şifre gereklidir',
+                field: 'password'
+            });
+        }
+        
+        // Şifre uzunluk kontrolü
+        if (trimmedPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Şifre en az 8 karakter olmalıdır',
+                field: 'password'
             });
         }
 
@@ -122,22 +139,33 @@ const register = async (req, res) => {
             });
         }
 
+        // Email format kontrolü
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Geçerli bir e-posta adresi giriniz',
+                field: 'email'
+            });
+        }
+
         // Email kontrolü
         const emailCheck = await pool.query(
             'SELECT id FROM kullanicilar WHERE eposta = $1',
-            [email]
+            [trimmedEmail]
         );
 
         if (emailCheck.rows.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Bu email adresi zaten kayıtlı'
+                message: 'Bu email adresi zaten kayıtlı',
+                field: 'email'
             });
         }
 
         // Şifreyi hashle - Node.js bcrypt kullan (kayıt için)
         const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const hashedPassword = await bcrypt.hash(trimmedPassword, saltRounds);
         
         if (process.env.NODE_ENV === 'development') {
             console.log('🔐 Şifre hash\'lendi:', {
@@ -166,6 +194,42 @@ const register = async (req, res) => {
             });
         }
 
+        // Çiftçi kaydı için çiftlik bilgileri kontrolü
+        if (rol === 'ciftci') {
+            if (!farmName || farmName.trim() === '') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Çiftlik adı gereklidir',
+                    field: 'farmName'
+                });
+            }
+            if (!address || address.trim() === '') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Çiftlik adresi gereklidir',
+                    field: 'address'
+                });
+            }
+        }
+        
+        // Şirket kaydı için şirket bilgileri kontrolü
+        if (rol === 'firma') {
+            if (!companyName || companyName.trim() === '') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Şirket adı gereklidir',
+                    field: 'companyName'
+                });
+            }
+            if (!taxNumber || taxNumber.trim() === '') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Vergi numarası gereklidir',
+                    field: 'taxNumber'
+                });
+            }
+        }
+
         // Ziraat ve sanayi yöneticileri için durum 'aktif', diğerleri için 'beklemede'
         const durum = (rol === 'ziraat_yoneticisi' || rol === 'sanayi_yoneticisi') ? 'aktif' : 'beklemede';
 
@@ -183,7 +247,7 @@ const register = async (req, res) => {
                 (ad, soyad, eposta, sifre_hash, telefon, rol, durum, eposta_dogrulandi, sartlar_kabul, sartlar_kabul_tarihi)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, TRUE, CURRENT_TIMESTAMP)
                 RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
-                [firstName, lastName, email, hashedPassword, phone, rol, durum]
+                [trimmedFirstName, trimmedLastName, trimmedEmail, hashedPassword, trimmedPhone, rol, durum]
             );
 
             user = userResult.rows[0];
@@ -218,9 +282,9 @@ const register = async (req, res) => {
 
         if (rol === 'ciftci') {
             // Çiftlik başvurusu oluştur (normalizasyon: başvuru ve kayıtlı çiftlik ayrı)
-            const ciftlikName = farmName || `${firstName} ${lastName}'nin Çiftliği`;
-            const ciftlikAdres = address || 'Belirtilmemiş';
-            const sahipAdi = `${firstName} ${lastName}`;
+            const ciftlikName = (farmName?.trim() || `${trimmedFirstName} ${trimmedLastName}'nin Çiftliği`);
+            const ciftlikAdres = (address?.trim() || 'Belirtilmemiş');
+            const sahipAdi = `${trimmedFirstName} ${trimmedLastName}`;
             
             // Önce ciftlik_basvurulari tablosuna başvuru ekle
             // Not: ciftlik_id henüz yok, onaylandıktan sonra ciftlikler tablosuna geçecek
@@ -843,13 +907,45 @@ const checkEmail = async (req, res) => {
             [email]
         );
 
+        // E-posta kontrolü için: kayıtlıysa duplicate, değilse available
+        // Şifre sıfırlama için: kayıtlı değilse 404 döndür
+        // Request'te checkType parametresi varsa e-posta kontrolü yapıyoruz
+        const checkType = req.body.checkType; // 'availability' veya undefined (şifre sıfırlama)
+        
+        if (process.env.NODE_ENV === 'development') {
+            console.log('📧 Check Email:', {
+                email: email,
+                checkType: checkType,
+                emailFound: result.rows.length > 0
+            });
+        }
+
         if (result.rows.length === 0) {
+            // E-posta kontrolü için
+            if (checkType === 'availability') {
+                return res.json({
+                    success: true,
+                    available: true,
+                    message: 'Bu e-posta ile kayıt olabilirsiniz'
+                });
+            }
+            // Şifre sıfırlama için
             return res.status(404).json({
                 success: false,
                 message: 'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı'
             });
         }
 
+        // E-posta kayıtlı
+        if (checkType === 'availability') {
+            return res.json({
+                success: true,
+                available: false,
+                message: 'Bu e-posta adresi zaten kayıtlı'
+            });
+        }
+
+        // Şifre sıfırlama için
         res.json({
             success: true,
             message: 'E-posta adresi doğrulandı'

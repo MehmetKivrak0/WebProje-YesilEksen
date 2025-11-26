@@ -21,6 +21,7 @@ export interface ApproveFarmResponse {
     success: boolean;
     message: string;
     status?: string;
+    ciftlikId?: string;
     missingDocuments?: Array<{
         ad: string;
         durum: string;
@@ -161,6 +162,7 @@ export const ziraatService = {
     //Çiftlik Logları (Belirli bir çiftlik için)
     getFarmLogs: async (id: string): Promise<{ 
         success: boolean; 
+        farmName?: string;
         logs: {
             activities: any[];
             detailedActivities: any[];
@@ -181,29 +183,6 @@ export const ziraatService = {
         }
     }> => {
         const response = await api.get('/ziraat/farms/logs/all');
-        return response.data;
-    },
-
-    //Belge Durumunu Güncelle
-    updateDocumentStatus: async (belgeId: string, data: { 
-        status: string; 
-        reason?: string; 
-        adminNote?: string;
-    }): Promise<{ success: boolean; message: string }> => {
-        const response = await api.put(`/ziraat/documents/${belgeId}`, data);
-        return response.data;
-    },
-
-    //Çiftlik Başvuru Durumunu Güncelle
-    updateFarmApplicationStatus: async (id: string, data: { 
-        status: string; 
-        reason?: string;
-    }): Promise<{ success: boolean; message: string }> => {
-        const cleanId = String(id).trim();
-        if (!cleanId) {
-            throw new Error('Geçersiz başvuru ID\'si');
-        }
-        const response = await api.put(`/ziraat/farms/status/${encodeURIComponent(cleanId)}`, data);
         return response.data;
     },
 }

@@ -5,7 +5,6 @@ import ApplicationSummaryCards from './components/ApplicationSummaryCards';
 import ApplicationTable from './components/ApplicationTable';
 import InspectModal from './components/modals/InspectModal';
 import RejectModal from './components/modals/RejectModal';
-import PreviewApprovalModal from './components/modals/PreviewApprovalModal';
 import FarmLogModal from './components/modals/FarmLogModal';
 import FarmToast from './components/FarmToast';
 import { useFarmApplications } from './hooks/useFarmApplications';
@@ -22,25 +21,16 @@ function FarmApplicationsPage() {
     setInspectedApplication,
     rejectedApplication,
     setRejectedApplication,
-    previewApplication,
-    setPreviewApplication,
     rejectReason,
     setRejectReason,
-    getDocumentReviews,
-    updateDocumentReviews,
-    updateDocumentStatus,
-    updateDocumentReason,
-    updateDocumentAdminNote,
     filteredApplications,
     closeInspectModal,
-    handleApprove,
     handleReject,
     handleQuickApprove,
     loading,
     error,
     approvingId,
     rejectingId,
-    updatingDocumentId,
     toast,
     setToast,
   } = useFarmApplications();
@@ -114,7 +104,6 @@ function FarmApplicationsPage() {
       {inspectedApplication && (
         <InspectModal
           application={inspectedApplication}
-          documentReviews={getDocumentReviews(inspectedApplication.id)}
           onClose={closeInspectModal}
         />
       )}
@@ -129,25 +118,6 @@ function FarmApplicationsPage() {
             setRejectReason('');
           }}
           onSubmit={handleRejectSubmit}
-        />
-      )}
-
-      {previewApplication && (
-        <PreviewApprovalModal
-          application={previewApplication}
-          documentReviews={getDocumentReviews(previewApplication.id)}
-          onClose={() => {
-            setPreviewApplication(null);
-            // Eğer inspect modal açıksa onu da kapat
-            if (inspectedApplication?.id === previewApplication.id) {
-              setInspectedApplication(null);
-            }
-          }}
-          onConfirm={async () => {
-            await handleApprove(previewApplication);
-            setPreviewApplication(null);
-          }}
-          isProcessing={approvingId === previewApplication.id}
         />
       )}
 
