@@ -59,6 +59,7 @@ function Kayit() {
     status: 'idle' | 'checking' | 'available' | 'duplicate' | 'error';
     message?: string;
     checkedEmail?: string;
+    isRejected?: boolean; // Reddedilen kullanıcılar için özel renk
   }>({ status: 'idle' });
 
   // URL parametrelerinden gelen verileri formData'ya yükle
@@ -235,19 +236,23 @@ function Kayit() {
       
       // Backend'den available bilgisi geliyor
       if (response.available === true) {
+        // Backend'den gelen mesajı kullan (reddedilen kullanıcılar için özel mesaj olabilir)
+        const message = response.message || 'Bu e-posta ile kayıt olabilirsiniz';
+        const isRejected = message.toLowerCase().includes('reddedilmiş') || message.toLowerCase().includes('reddedildi');
         const availableState = { 
           status: 'available' as const, 
           checkedEmail: trimmedEmail,
-          message: 'Bu e-posta ile kayıt olabilirsiniz'
+          message: message,
+          isRejected: isRejected
         };
         setEmailCheck(availableState);
         return availableState.status;
       } else if (response.available === false) {
-        // E-posta zaten kayıtlı
+        // E-posta zaten kayıtlı - Backend'den gelen mesajı kullan
         const duplicateState = {
           status: 'duplicate' as const,
           checkedEmail: trimmedEmail,
-          message: 'Bu e-posta adresi zaten kayıtlı. Lütfen farklı bir e-posta kullanın.',
+          message: response.message || 'Bu e-posta adresi zaten kayıtlı. Lütfen farklı bir e-posta kullanın.',
         };
         setEmailCheck(duplicateState);
         return duplicateState.status;
@@ -259,7 +264,8 @@ function Kayit() {
           const availableState = { 
             status: 'available' as const, 
             checkedEmail: trimmedEmail,
-            message: 'Bu e-posta ile kayıt olabilirsiniz'
+            message: 'Bu e-posta ile kayıt olabilirsiniz',
+            isRejected: false
           };
           setEmailCheck(availableState);
           return availableState.status;
@@ -279,7 +285,8 @@ function Kayit() {
         const availableState = { 
           status: 'available' as const, 
           checkedEmail: trimmedEmail,
-          message: 'Bu e-posta ile kayıt olabilirsiniz'
+          message: 'Bu e-posta ile kayıt olabilirsiniz',
+          isRejected: false
         };
         setEmailCheck(availableState);
         return availableState.status;
@@ -333,9 +340,10 @@ function Kayit() {
       if (formData.email) {
         const emailStatus = await checkEmailAvailability(formData.email);
         if (emailStatus === 'duplicate') {
-          setError('Lütfen Yeni Eposta ile devam ediniz');
+          const duplicateMessage = emailCheck.message || 'Lütfen Yeni Eposta ile devam ediniz';
+          setError(duplicateMessage);
           setToast({
-            message: 'Lütfen Yeni Eposta ile devam ediniz',
+            message: duplicateMessage,
             type: 'error',
             isVisible: true
           });
@@ -417,7 +425,7 @@ function Kayit() {
       // E-posta daha önce kullanılmış mı kontrol et
       const emailStatus = await checkEmailAvailability(formData.email);
       if (emailStatus === 'duplicate') {
-        const duplicateMessage = 'Lütfen Yeni Eposta ile devam ediniz';
+        const duplicateMessage = emailCheck.message || 'Lütfen Yeni Eposta ile devam ediniz';
         setError(duplicateMessage);
         setToast({
           message: duplicateMessage,
@@ -748,7 +756,13 @@ function Kayit() {
                         <p className="mt-2 text-sm text-subtle-light dark:text-subtle-dark">E-posta kontrol ediliyor...</p>
                       )}
                       {emailCheck.status === 'available' && (
-                        <p className="mt-2 text-sm text-green-600 dark:text-green-400">{emailCheck.message || 'Bu e-posta ile kayıt olabilirsiniz'}</p>
+                        <p className={`mt-2 text-sm ${
+                          emailCheck.isRejected 
+                            ? 'text-blue-600 dark:text-blue-400' 
+                            : 'text-green-600 dark:text-green-400'
+                        }`}>
+                          {emailCheck.message || 'Bu e-posta ile kayıt olabilirsiniz'}
+                        </p>
                       )}
                       {emailCheck.status === 'duplicate' && (
                         <p className="mt-2 text-sm text-red-600 dark:text-red-400">{emailCheck.message}</p>

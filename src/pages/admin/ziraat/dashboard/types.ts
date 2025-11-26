@@ -1,4 +1,4 @@
-export type ActivityType = 'kayit' | 'guncelleme' | 'onay';
+export type ActivityType = 'kayit' | 'guncelleme' | 'onay' | 'red' | 'durum_degisikligi';
 
 export type Activity = {
   id: string;

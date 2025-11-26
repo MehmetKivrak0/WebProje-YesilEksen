@@ -22,5 +22,19 @@ export const activityTypeMeta: ActivityTypeMetaMap = {
     bubbleClass: 'bg-green-100 dark:bg-green-900/40',
     iconClass: 'text-green-600 dark:text-green-300',
   },
+  red: {
+    label: 'Red',
+    icon: 'cancel',
+    badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900/70 dark:text-red-200',
+    bubbleClass: 'bg-red-100 dark:bg-red-900/40',
+    iconClass: 'text-red-600 dark:text-red-300',
+  },
+  durum_degisikligi: {
+    label: 'Durum Değişikliği',
+    icon: 'swap_horiz',
+    badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/70 dark:text-blue-200',
+    bubbleClass: 'bg-blue-100 dark:bg-blue-900/40',
+    iconClass: 'text-blue-600 dark:text-blue-300',
+  },
 };
 

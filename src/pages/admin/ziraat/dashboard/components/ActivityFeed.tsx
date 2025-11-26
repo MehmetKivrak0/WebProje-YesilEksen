@@ -37,7 +37,14 @@ function ActivityFeed({ activities, activeFilter, onFilterChange }: ActivityFeed
       <div className="space-y-4">
         {activities.length > 0 ? (
           activities.map((activity) => {
-            const meta = activityTypeMeta[activity.type];
+            // Meta bilgisini al, eğer yoksa varsayılan meta kullan
+            const meta = activityTypeMeta[activity.type] || {
+              label: 'Aktivite',
+              icon: 'info',
+              badgeClass: 'bg-gray-100 text-gray-700 dark:bg-gray-900/70 dark:text-gray-200',
+              bubbleClass: 'bg-gray-100 dark:bg-gray-900/40',
+              iconClass: 'text-gray-600 dark:text-gray-300',
+            };
             return (
               <div
                 key={activity.id}

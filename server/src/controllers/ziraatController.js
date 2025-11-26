@@ -880,7 +880,7 @@ const rejectFarm = async (req, res) => {
             kullanici_id: kullaniciId
         });
 
-        // 1. İlişkili belgeleri sil
+        // 1. İlişkili belgeleri sil (yeniden kayıt için yeni belgeler yüklenecek)
         const belgelerResult = await client.query(
             `SELECT id, dosya_yolu FROM belgeler 
              WHERE basvuru_id = $1 AND basvuru_tipi = 'ciftlik_basvurusu'`,
@@ -896,13 +896,15 @@ const rejectFarm = async (req, res) => {
             [id]
         );
 
-        // 2. Başvuruyu sil
+        // 2. Başvuruyu silmek yerine durumunu "reddedildi" yap (yeniden kayıt için)
         await client.query(
-            `DELETE FROM ciftlik_basvurulari WHERE id = $1`,
-            [id]
+            `UPDATE ciftlik_basvurulari 
+             SET durum = 'reddedildi', guncelleme = CURRENT_TIMESTAMP, red_nedeni = $1
+             WHERE id = $2`,
+            [reason, id]
         );
 
-        console.log(`✅ [CIFTLIK RED] Başvuru ve belgeler silindi`);
+        console.log(`✅ [CIFTLIK RED] Başvuru durumu "reddedildi" olarak güncellendi, belgeler silindi`);
 
         // Transaction'ı commit et
         await client.query('COMMIT');
@@ -918,8 +920,8 @@ const rejectFarm = async (req, res) => {
                     basvuru_id: id,
                     islem_tipi: 'red',
                     eski_durum: oncekiDurum,
-                    yeni_durum: 'silindi',
-                    aciklama: `Çiftlik başvurusu reddedildi ve silindi. Neden: ${reason}`,
+                    yeni_durum: 'reddedildi',
+                    aciklama: `Çiftlik başvurusu reddedildi. Neden: ${reason}`,
                     ip_adresi: req.ip,
                     user_agent: req.get('user-agent')
                 });
@@ -934,7 +936,7 @@ const rejectFarm = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Çiftlik başvurusu reddedildi ve tüm bilgiler silindi'
+            message: 'Çiftlik başvurusu reddedildi'
         });
     } catch (error) {
         await client.query('ROLLBACK');

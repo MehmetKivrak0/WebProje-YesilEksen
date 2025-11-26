@@ -149,18 +149,56 @@ const register = async (req, res) => {
             });
         }
 
-        // Email kontrolü
+        // Email kontrolü - Reddedilen kullanıcılar için özel mantık
+        // Not: Transaction başlamadan önce pool kullanıyoruz
         const emailCheck = await pool.query(
-            'SELECT id FROM kullanicilar WHERE eposta = $1',
+            `SELECT k.id, k.rol, k.durum, 
+                    (SELECT COUNT(*) FROM ciftlik_basvurulari cb 
+                     WHERE cb.kullanici_id = k.id AND cb.durum IN ('ilk_inceleme', 'belge_eksik', 'onaylandi')) as aktif_basvuru_sayisi,
+                    (SELECT COUNT(*) FROM ciftlik_basvurulari cb 
+                     WHERE cb.kullanici_id = k.id) as toplam_basvuru_sayisi
+             FROM kullanicilar k 
+             WHERE k.eposta = $1`,
             [trimmedEmail]
         );
 
+        let existingUser = null;
+        let isRejectedUser = false;
+
         if (emailCheck.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Bu email adresi zaten kayıtlı',
-                field: 'email'
-            });
+            existingUser = emailCheck.rows[0];
+            
+            // Eğer kullanıcı çiftçi ise ve aktif başvurusu yoksa (reddedilmiş ve silinmiş olabilir)
+            // izin ver
+            if (existingUser.rol === 'ciftci' && userType === 'farmer') {
+                const aktifBasvuruSayisi = parseInt(existingUser.aktif_basvuru_sayisi) || 0;
+                const toplamBasvuruSayisi = parseInt(existingUser.toplam_basvuru_sayisi) || 0;
+                
+                // Eğer aktif başvurusu yoksa (reddedilmiş ve silinmiş olabilir), yeniden kayıt olabilir
+                if (aktifBasvuruSayisi === 0) {
+                    isRejectedUser = true;
+                    console.log(`🔄 [KAYIT] Reddedilen kullanıcı yeniden kayıt oluyor:`, {
+                        email: trimmedEmail,
+                        kullanici_id: existingUser.id,
+                        aktif_basvuru_sayisi: aktifBasvuruSayisi,
+                        toplam_basvuru_sayisi: toplamBasvuruSayisi
+                    });
+                } else {
+                    // Aktif başvurusu var, kayıt olamaz
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Bu email adresi zaten kayıtlı ve aktif başvurunuz bulunmaktadır',
+                        field: 'email'
+                    });
+                }
+            } else {
+                // Çiftçi değilse veya farklı rol ile kayıt olmaya çalışıyorsa, normal hata
+                return res.status(400).json({
+                    success: false,
+                    message: 'Bu email adresi zaten kayıtlı',
+                    field: 'email'
+                });
+            }
         }
 
         // Şifreyi hashle - Node.js bcrypt kullan (kayıt için)
@@ -239,34 +277,79 @@ const register = async (req, res) => {
             console.log('🔄 Transaction başlatıldı');
         }
 
-        // Kullanıcı oluştur
+        // Kullanıcı oluştur veya güncelle (reddedilen kullanıcılar için)
         let user;
         try {
-            const userResult = await client.query(
-                `INSERT INTO kullanicilar 
-                (ad, soyad, eposta, sifre_hash, telefon, rol, durum, eposta_dogrulandi, sartlar_kabul, sartlar_kabul_tarihi)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, TRUE, CURRENT_TIMESTAMP)
-                RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
-                [trimmedFirstName, trimmedLastName, trimmedEmail, hashedPassword, trimmedPhone, rol, durum]
-            );
+            if (isRejectedUser && existingUser) {
+                // Reddedilen kullanıcı: Mevcut kullanıcıyı güncelle
+                const userUpdateResult = await client.query(
+                    `UPDATE kullanicilar 
+                    SET ad = $1, soyad = $2, sifre_hash = $3, telefon = $4, durum = $5, 
+                        sartlar_kabul = TRUE, sartlar_kabul_tarihi = CURRENT_TIMESTAMP
+                    WHERE id = $6
+                    RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
+                    [trimmedFirstName, trimmedLastName, hashedPassword, trimmedPhone, durum, existingUser.id]
+                );
 
-            user = userResult.rows[0];
-            
-            if (!user || !user.id) {
-                throw new Error('Kullanıcı oluşturulamadı - user.id bulunamadı');
-            }
-            
-            if (process.env.NODE_ENV === 'development') {
-                console.log('✅ Kullanıcı oluşturuldu:', {
-                    id: user.id,
-                    email: user.eposta,
-                    rol: user.rol,
-                    durum: user.durum,
-                    idType: typeof user.id
-                });
+                user = userUpdateResult.rows[0];
+                
+                if (!user || !user.id) {
+                    throw new Error('Kullanıcı güncellenemedi - user.id bulunamadı');
+                }
+                
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('✅ Reddedilen kullanıcı güncellendi:', {
+                        id: user.id,
+                        email: user.eposta,
+                        rol: user.rol,
+                        durum: user.durum
+                    });
+                }
+
+                // Eski belgeleri sil (eğer varsa)
+                const eskiBelgelerResult = await client.query(
+                    `SELECT id, dosya_yolu FROM belgeler 
+                     WHERE kullanici_id = $1 AND basvuru_tipi = 'ciftlik_basvurusu'`,
+                    [user.id]
+                );
+
+                if (eskiBelgelerResult.rows.length > 0) {
+                    console.log(`🗑️ [KAYIT] ${eskiBelgelerResult.rows.length} eski belge siliniyor...`);
+                    await client.query(
+                        `DELETE FROM belgeler 
+                         WHERE kullanici_id = $1 AND basvuru_tipi = 'ciftlik_basvurusu'`,
+                        [user.id]
+                    );
+                    console.log(`✅ [KAYIT] Eski belgeler silindi`);
+                }
+            } else {
+                // Yeni kullanıcı oluştur
+                const userResult = await client.query(
+                    `INSERT INTO kullanicilar 
+                    (ad, soyad, eposta, sifre_hash, telefon, rol, durum, eposta_dogrulandi, sartlar_kabul, sartlar_kabul_tarihi)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, TRUE, CURRENT_TIMESTAMP)
+                    RETURNING id, ad, soyad, eposta, telefon, rol, durum`,
+                    [trimmedFirstName, trimmedLastName, trimmedEmail, hashedPassword, trimmedPhone, rol, durum]
+                );
+
+                user = userResult.rows[0];
+                
+                if (!user || !user.id) {
+                    throw new Error('Kullanıcı oluşturulamadı - user.id bulunamadı');
+                }
+                
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('✅ Kullanıcı oluşturuldu:', {
+                        id: user.id,
+                        email: user.eposta,
+                        rol: user.rol,
+                        durum: user.durum,
+                        idType: typeof user.id
+                    });
+                }
             }
         } catch (userError) {
-            console.error('❌ Kullanıcı oluşturma hatası:', {
+            console.error('❌ Kullanıcı oluşturma/güncelleme hatası:', {
                 message: userError.message,
                 code: userError.code,
                 detail: userError.detail,
@@ -281,29 +364,75 @@ const register = async (req, res) => {
         let firmaId = null;
 
         if (rol === 'ciftci') {
-            // Çiftlik başvurusu oluştur (normalizasyon: başvuru ve kayıtlı çiftlik ayrı)
+            // Çiftlik başvurusu oluştur veya güncelle (reddedilen kullanıcılar için)
             const ciftlikName = (farmName?.trim() || `${trimmedFirstName} ${trimmedLastName}'nin Çiftliği`);
             const ciftlikAdres = (address?.trim() || 'Belirtilmemiş');
             const sahipAdi = `${trimmedFirstName} ${trimmedLastName}`;
             
-            // Önce ciftlik_basvurulari tablosuna başvuru ekle
-            // Not: ciftlik_id henüz yok, onaylandıktan sonra ciftlikler tablosuna geçecek
-            // Telefon: kullanicilar tablosundan çekilecek
-            const basvuruResult = await client.query(
-                `INSERT INTO ciftlik_basvurulari 
-                (kullanici_id, ciftlik_adi, sahip_adi, konum, durum)
-                VALUES ($1, $2, $3, $4, 'ilk_inceleme')
-                RETURNING id`,
-                [user.id, ciftlikName, sahipAdi, ciftlikAdres]
-            );
-            const basvuruId = basvuruResult.rows[0].id;
-
-            if (process.env.NODE_ENV === 'development') {
-                console.log('✅ Çiftlik başvurusu oluşturuldu:', {
-                    basvuru_id: basvuruId,
-                    ciftlik_adi: ciftlikName,
-                    durum: 'ilk_inceleme'
-                });
+            let basvuruId = null;
+            
+            // Reddedilen kullanıcılar için eski başvuruyu bul ve güncelle
+            if (isRejectedUser && existingUser) {
+                // Önce kullanıcının durumu "reddedildi" olan başvurusunu bul
+                const reddedilenBasvuruResult = await client.query(
+                    `SELECT id, durum FROM ciftlik_basvurulari 
+                     WHERE kullanici_id = $1 AND durum = 'reddedildi'
+                     ORDER BY guncelleme DESC, olusturma_tarihi DESC 
+                     LIMIT 1`,
+                    [user.id]
+                );
+                
+                if (reddedilenBasvuruResult.rows.length > 0) {
+                    // "Reddedildi" durumundaki başvuruyu bulduk, üzerine yaz
+                    const eskiBasvuru = reddedilenBasvuruResult.rows[0];
+                    basvuruId = eskiBasvuru.id;
+                    
+                    await client.query(
+                        `UPDATE ciftlik_basvurulari 
+                         SET ciftlik_adi = $1, sahip_adi = $2, konum = $3, durum = 'ilk_inceleme', 
+                             olusturma_tarihi = CURRENT_TIMESTAMP, guncelleme = CURRENT_TIMESTAMP,
+                             red_nedeni = NULL, notlar = NULL
+                         WHERE id = $4`,
+                        [ciftlikName, sahipAdi, ciftlikAdres, basvuruId]
+                    );
+                    
+                    console.log(`🔄 [KAYIT] "Reddedildi" durumundaki başvuru güncellendi (üzerine yazıldı):`, {
+                        basvuru_id: basvuruId,
+                        onceki_durum: eskiBasvuru.durum,
+                        yeni_durum: 'ilk_inceleme'
+                    });
+                } else {
+                    // "Reddedildi" durumunda başvuru bulunamadı, yeni oluştur
+                    const basvuruResult = await client.query(
+                        `INSERT INTO ciftlik_basvurulari 
+                        (kullanici_id, ciftlik_adi, sahip_adi, konum, durum)
+                        VALUES ($1, $2, $3, $4, 'ilk_inceleme')
+                        RETURNING id`,
+                        [user.id, ciftlikName, sahipAdi, ciftlikAdres]
+                    );
+                    basvuruId = basvuruResult.rows[0].id;
+                    console.log(`✅ [KAYIT] Yeni başvuru oluşturuldu ("reddedildi" durumunda başvuru bulunamadı):`, {
+                        basvuru_id: basvuruId
+                    });
+                }
+            } else {
+                // Yeni kullanıcı için yeni başvuru oluştur
+                const basvuruResult = await client.query(
+                    `INSERT INTO ciftlik_basvurulari 
+                    (kullanici_id, ciftlik_adi, sahip_adi, konum, durum)
+                    VALUES ($1, $2, $3, $4, 'ilk_inceleme')
+                    RETURNING id`,
+                    [user.id, ciftlikName, sahipAdi, ciftlikAdres]
+                );
+                basvuruId = basvuruResult.rows[0].id;
+                
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('✅ Çiftlik başvurusu oluşturuldu:', {
+                        basvuru_id: basvuruId,
+                        ciftlik_adi: ciftlikName,
+                        durum: 'ilk_inceleme'
+                    });
+                }
             }
 
             // Atık türlerini başvuru notlarına kaydet (varsa)
@@ -313,12 +442,23 @@ const register = async (req, res) => {
                 const wasteTypesArray = Array.isArray(wasteTypes) ? wasteTypes : JSON.parse(wasteTypes);
                 const atikTurleriListesi = wasteTypesArray.join(', ');
                 
-                await client.query(
-                    `UPDATE ciftlik_basvurulari 
-                    SET notlar = COALESCE(notlar || E'\\n', '') || $1
-                    WHERE id = $2`,
-                    [`Atık Türleri: ${atikTurleriListesi}`, basvuruId]
-                );
+                // Eğer eski başvuru güncelleniyorsa, notları temizle ve yeni not ekle
+                if (isRejectedUser && existingUser) {
+                    await client.query(
+                        `UPDATE ciftlik_basvurulari 
+                        SET notlar = $1
+                        WHERE id = $2`,
+                        [`Atık Türleri: ${atikTurleriListesi}`, basvuruId]
+                    );
+                } else {
+                    // Yeni başvuru için not ekle
+                    await client.query(
+                        `UPDATE ciftlik_basvurulari 
+                        SET notlar = COALESCE(notlar || E'\\n', '') || $1
+                        WHERE id = $2`,
+                        [`Atık Türleri: ${atikTurleriListesi}`, basvuruId]
+                    );
+                }
             }
 
             // Çiftçi belgelerini kaydet (belgeler tablosu kullanılıyor)
@@ -901,9 +1041,15 @@ const checkEmail = async (req, res) => {
             });
         }
 
-        // Kullanıcıyı bul
+        // Kullanıcıyı bul ve aktif başvuru kontrolü yap
         const result = await pool.query(
-            'SELECT id, eposta FROM kullanicilar WHERE eposta = $1',
+            `SELECT k.id, k.eposta, k.rol,
+                    (SELECT COUNT(*) FROM ciftlik_basvurulari cb 
+                     WHERE cb.kullanici_id = k.id AND cb.durum IN ('ilk_inceleme', 'belge_eksik', 'onaylandi')) as aktif_basvuru_sayisi,
+                    (SELECT COUNT(*) FROM ciftlik_basvurulari cb 
+                     WHERE cb.kullanici_id = k.id) as toplam_basvuru_sayisi
+             FROM kullanicilar k 
+             WHERE k.eposta = $1`,
             [email]
         );
 
@@ -916,7 +1062,9 @@ const checkEmail = async (req, res) => {
             console.log('📧 Check Email:', {
                 email: email,
                 checkType: checkType,
-                emailFound: result.rows.length > 0
+                emailFound: result.rows.length > 0,
+                aktifBasvuru: result.rows.length > 0 ? result.rows[0].aktif_basvuru_sayisi : 0,
+                toplamBasvuru: result.rows.length > 0 ? result.rows[0].toplam_basvuru_sayisi : 0
             });
         }
 
@@ -936,8 +1084,22 @@ const checkEmail = async (req, res) => {
             });
         }
 
-        // E-posta kayıtlı
+        // E-posta kayıtlı - Aktif başvuru kontrolü
         if (checkType === 'availability') {
+            const user = result.rows[0];
+            const aktifBasvuruSayisi = parseInt(user.aktif_basvuru_sayisi) || 0;
+            
+            // Eğer çiftçi ise ve aktif başvurusu yoksa (reddedilmiş ve silinmiş olabilir)
+            // izin ver
+            if (user.rol === 'ciftci' && aktifBasvuruSayisi === 0) {
+                return res.json({
+                    success: true,
+                    available: true,
+                    message: 'Bu e-posta ile kayıt olabilirsiniz (önceki başvurunuz reddedilmiş)'
+                });
+            }
+            
+            // Aktif başvurusu var veya çiftçi değil
             return res.json({
                 success: true,
                 available: false,
