@@ -939,9 +939,13 @@ const rejectFarm = async (req, res) => {
         // 2. Başvuruyu silmek yerine durumunu "reddedildi" yap (yeniden kayıt için)
         await client.query(
             `UPDATE ciftlik_basvurulari 
-             SET durum = 'reddedildi', guncelleme = CURRENT_TIMESTAMP, red_nedeni = $1
+             SET durum = 'reddedildi', 
+                 guncelleme = CURRENT_TIMESTAMP, 
+                 inceleme_tarihi = CURRENT_TIMESTAMP,
+                 inceleyen_id = $3::uuid,
+                 red_nedeni = $1
              WHERE id = $2`,
-            [reason, id]
+            [reason, id, req.user?.id]
         );
 
         console.log(`✅ [CIFTLIK RED] Başvuru durumu "reddedildi" olarak güncellendi, belgeler silindi`);
@@ -1005,6 +1009,15 @@ const sendBelgeEksikMessage = async (req, res) => {
 
         const { id } = req.params; // basvuru_id
         const { belgeMessages } = req.body;
+        const adminId = req.user?.id;
+
+        if (!adminId) {
+            await client.query('ROLLBACK');
+            return res.status(401).json({
+                success: false,
+                message: 'Yetkisiz işlem'
+            });
+        }
 
         if (!belgeMessages || !Array.isArray(belgeMessages) || belgeMessages.length === 0) {
             await client.query('ROLLBACK');
@@ -1067,12 +1080,15 @@ const sendBelgeEksikMessage = async (req, res) => {
                  SET durum = 'Eksik', 
                      kullanici_notu = $1, 
                      yonetici_notu = $2,
+                     inceleme_tarihi = CURRENT_TIMESTAMP,
+                     inceleyen_id = $3::uuid,
                      guncelleme = CURRENT_TIMESTAMP
-                 WHERE id = $3::uuid AND basvuru_id = $4::uuid AND basvuru_tipi = 'ciftlik_basvurusu'
+                 WHERE id = $4::uuid AND basvuru_id = $5::uuid AND basvuru_tipi = 'ciftlik_basvurusu'
                  RETURNING id, kullanici_notu, yonetici_notu`,
                 [
                     farmerMsg, 
                     adminNote,
+                    adminId,
                     belgeMsg.belgeId, 
                     id
                 ]
@@ -1095,9 +1111,12 @@ const sendBelgeEksikMessage = async (req, res) => {
         // Çiftlik başvurusu durumunu "belge_eksik" yap
         await client.query(
             `UPDATE ciftlik_basvurulari 
-             SET durum = 'belge_eksik', guncelleme = CURRENT_TIMESTAMP
+             SET durum = 'belge_eksik', 
+                 inceleme_tarihi = CURRENT_TIMESTAMP,
+                 inceleyen_id = $2::uuid,
+                 guncelleme = CURRENT_TIMESTAMP
              WHERE id = $1`,
-            [id]
+            [id, adminId]
         );
 
         // Transaction'ı commit et
@@ -1240,6 +1259,86 @@ const getRegisteredFarmers = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Kayıtlı çiftçiler alınamadı',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Get Farmer Details - GET /api/ziraat/farmers/:id
+const getFarmerDetails = async (req, res) => {
+    try {
+        const { id } = req.params; // kullanici_id veya ciftlik_id
+        
+        console.log(`🔍 [FARMER DETAILS] İstek alındı - ID: ${id}, Type: ${typeof id}`);
+
+        // Önce kullanıcı ID'si ile çiftliği bul
+        const farmerQuery = `
+            SELECT 
+                k.id as "kullanici_id",
+                CONCAT(k.ad, ' ', k.soyad) as name,
+                k.eposta as email,
+                k.telefon as phone,
+                c.id as "ciftlik_id",
+                c.ad as "farmName",
+                c.adres as address,
+                c.durum as status,
+                c.olusturma as "registrationDate",
+                c.aciklama as description
+            FROM kullanicilar k
+            JOIN ciftlikler c ON c.kullanici_id = k.id
+            WHERE (k.id = $1::uuid OR c.id = $1::uuid) AND c.durum = 'aktif' AND c.silinme IS NULL
+            LIMIT 1
+        `;
+
+        const farmerResult = await pool.query(farmerQuery, [id]);
+
+        if (farmerResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftçi bulunamadı'
+            });
+        }
+
+        const farmer = farmerResult.rows[0];
+        const ciftlikId = farmer.ciftlik_id;
+
+        // Belgeleri al
+        const documentsQuery = `
+            SELECT 
+                b.id as "belgeId",
+                b.ad as name,
+                b.dosya_yolu as url,
+                b.durum as status,
+                b.kullanici_notu as "farmerNote",
+                b.yonetici_notu as "adminNote",
+                bt.ad as "belgeTuru",
+                bt.kod as "belgeKodu"
+            FROM belgeler b
+            LEFT JOIN belge_turleri bt ON b.belge_turu_id = bt.id
+            WHERE b.ciftlik_id = $1::uuid AND b.basvuru_tipi = 'ciftlik_basvurusu'
+            ORDER BY b.olusturma DESC
+        `;
+
+        const documentsResult = await pool.query(documentsQuery, [ciftlikId]);
+
+        res.json({
+            success: true,
+            farmer: {
+                ...farmer,
+                status: 'Onaylandı', // Kayıtlı çiftçiler için her zaman onaylandı
+                documents: documentsResult.rows
+            }
+        });
+    } catch (error) {
+        console.error('Farmer details hatası:', error);
+        console.error('Hata detayı:', {
+            message: error.message,
+            stack: error.stack,
+            query: error.query || 'N/A'
+        });
+        res.status(500).json({
+            success: false,
+            message: 'Çiftçi detayları alınamadı',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
@@ -2089,6 +2188,7 @@ module.exports = {
     rejectFarm,
     sendBelgeEksikMessage,
     getRegisteredFarmers,
+    getFarmerDetails,
     getDashboardProducts,
     getActivityLog,
     getFarmLogs,

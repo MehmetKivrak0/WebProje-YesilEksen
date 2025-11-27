@@ -223,3 +223,5 @@ WHERE rol IN ('ziraat_yoneticisi', 'sanayi_yoneticisi');
 
 
 
+
+

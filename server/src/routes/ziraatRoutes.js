@@ -11,6 +11,7 @@ const {
     rejectFarm,
     sendBelgeEksikMessage,
     getRegisteredFarmers,
+    getFarmerDetails,
     getDashboardProducts,
     getActivityLog,
     getFarmLogs,
@@ -33,6 +34,7 @@ router.post('/farms/belge-eksik/:id', sendBelgeEksikMessage);
 router.get('/farms/logs/all', getAllFarmLogs);
 router.get('/farms/:id/logs', getFarmLogs);
 router.get('/farmers/registered', getRegisteredFarmers);
+router.get('/farmers/:id', getFarmerDetails);
 router.get('/dashboard/products', getDashboardProducts);
 router.get('/activity-log', getActivityLog);
 router.put('/documents/:belgeId', updateDocumentStatus);

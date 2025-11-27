@@ -161,6 +161,16 @@ export const ziraatService = {
         const response = await api.get('/ziraat/farmers/registered', { params });
         return response.data;
     },
+
+    //Çiftçi detayları
+    getFarmerDetails: async (id: string): Promise<{ success: boolean; farmer: any }> => {
+        const cleanId = String(id).trim();
+        if (!cleanId) {
+            throw new Error('Geçersiz çiftçi ID\'si');
+        }
+        const response = await api.get(`/ziraat/farmers/${encodeURIComponent(cleanId)}`);
+        return response.data;
+    },
     //Dashboard Ürünleri
     getDashboardProducts: async (params?: {
         search?: string;

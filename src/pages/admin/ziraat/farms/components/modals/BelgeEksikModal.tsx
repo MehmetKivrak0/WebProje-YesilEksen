@@ -109,16 +109,7 @@ function BelgeEksikModal({ application, onClose, onSuccess }: BelgeEksikModalPro
       }
       onClose();
     } catch (err: any) {
-      console.error('Belge eksik hatası:', err);
-      const errorMessage = err.response?.data?.message || 
-                          err.message || 
-                          'Belge eksik mesajı gönderilemedi';
-      setError(errorMessage);
-      
-      // 404 hatası için özel mesaj
-      if (err.response?.status === 404) {
-        setError('Endpoint bulunamadı. Lütfen backend server\'ın çalıştığından emin olun.');
-      }
+      setError(err.response?.data?.message || 'Belge eksik mesajı gönderilemedi');
     } finally {
       setLoading(false);
     }
@@ -156,11 +147,15 @@ function BelgeEksikModal({ application, onClose, onSuccess }: BelgeEksikModalPro
                 {application.documents && application.documents.length > 0 ? (
                   application.documents.map((doc: FarmDocument) => {
                     const isSelected = doc.belgeId ? selectedDocuments.has(doc.belgeId) : false;
+                    const normalizedStatus = (doc.status || '').toLowerCase();
+                    const hasFarmerNote = Boolean(doc.farmerNote && doc.farmerNote.trim());
+                    const isAlreadyMissing = normalizedStatus.includes('eksik') || hasFarmerNote;
+                    const isChecked = isSelected || isAlreadyMissing;
                     return (
                       <div
                         key={doc.belgeId || doc.name}
                         className={`rounded-lg border-2 p-4 transition-all ${
-                          isSelected
+                          isChecked
                             ? 'border-primary bg-primary/5 dark:bg-primary/10'
                             : 'border-border-light dark:border-border-dark'
                         }`}
@@ -168,10 +163,10 @@ function BelgeEksikModal({ application, onClose, onSuccess }: BelgeEksikModalPro
                         <label className="flex cursor-pointer items-start gap-3">
                           <input
                             type="checkbox"
-                            checked={isSelected}
-                            onChange={() => doc.belgeId && handleDocumentToggle(doc.belgeId)}
+                            checked={isChecked}
+                            onChange={() => doc.belgeId && !isAlreadyMissing && handleDocumentToggle(doc.belgeId)}
                             className="mt-1 h-4 w-4 rounded border-border-light text-primary focus:ring-primary dark:border-border-dark"
-                            disabled={!doc.belgeId}
+                            disabled={!doc.belgeId || isAlreadyMissing}
                           />
                           <div className="flex-1">
                             <div className="font-medium text-content-light dark:text-content-dark">
@@ -179,12 +174,28 @@ function BelgeEksikModal({ application, onClose, onSuccess }: BelgeEksikModalPro
                             </div>
                             {doc.status && (
                               <div className="text-xs text-subtle-light dark:text-subtle-dark mt-1">
-                                Durum: {doc.status}
+                                Durum: {isAlreadyMissing ? 'Belge Bekleniyor' : doc.status}
+                              </div>
+                            )}
+                            {isAlreadyMissing && (
+                              <div className="mt-2 rounded-lg bg-amber-100/70 px-3 py-2 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
+                                <p className="font-medium">Bu belge eksik olarak işaretlenmiş.</p>
+                                <p>Çiftçinin güncellemesi bekleniyor; yeni mesaj eklenemez.</p>
+                                {hasFarmerNote && (
+                                  <p className="mt-2 text-[11px] text-amber-950/80 dark:text-amber-50">
+                                    <span className="font-semibold">Çiftçiye iletilen mesaj:</span> {doc.farmerNote}
+                                  </p>
+                                )}
+                                {doc.adminNote && (
+                                  <p className="mt-1 text-[11px] text-amber-950/80 dark:text-amber-50">
+                                    <span className="font-semibold">Admin notu:</span> {doc.adminNote}
+                                  </p>
+                                )}
                               </div>
                             )}
                             
                             {/* Her belge için çiftçi mesajı ve admin notu */}
-                            {isSelected && doc.belgeId && (
+                            {isSelected && doc.belgeId && !isAlreadyMissing && (
                               <div className="mt-3 space-y-3">
                                 {/* Çiftçiye Gidecek Mesaj */}
                                 <div>

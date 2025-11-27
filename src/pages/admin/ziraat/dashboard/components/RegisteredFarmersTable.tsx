@@ -15,6 +15,7 @@ type RegisteredFarmersTableProps = {
   onPageChange: (page: number) => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
+  onInspect?: (farmerId: string) => void;
 };
 
 function RegisteredFarmersTable({
@@ -29,6 +30,7 @@ function RegisteredFarmersTable({
   onPageChange,
   onPreviousPage,
   onNextPage,
+  onInspect,
 }: RegisteredFarmersTableProps) {
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
     onSearchChange(event.target.value);
@@ -86,13 +88,23 @@ function RegisteredFarmersTable({
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  <Link
-                    to={farmer.detailPath}
-                    className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
-                  >
-                    İncele
-                    <span className="material-symbols-outlined text-sm leading-none">open_in_new</span>
-                  </Link>
+                  {onInspect ? (
+                    <button
+                      onClick={() => onInspect(farmer.id)}
+                      className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+                    >
+                      İncele
+                      <span className="material-symbols-outlined text-sm leading-none">visibility</span>
+                    </button>
+                  ) : (
+                    <Link
+                      to={farmer.detailPath}
+                      className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+                    >
+                      İncele
+                      <span className="material-symbols-outlined text-sm leading-none">open_in_new</span>
+                    </Link>
+                  )}
                 </td>
               </tr>
             ))}

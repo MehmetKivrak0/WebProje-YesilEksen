@@ -6,6 +6,7 @@ import ActivityFeed from './components/ActivityFeed';
 import RegisteredFarmersTable from './components/RegisteredFarmersTable';
 import ProductsTable from './components/ProductsTable';
 import ApplicationDetailModal from './components/ApplicationDetailModal';
+import FarmerDetailModal from './components/FarmerDetailModal';
 import { useDashboardFilters } from './hooks/useDashboardFilters';
 import { ziraatService } from '../../../../services/ziraatService';
 import type { DashboardStats, ProductApplication, FarmApplication } from '../../../../services/ziraatService';
@@ -23,6 +24,8 @@ function DashboardPage() {
   const [selectedFarm, setSelectedFarm] = useState<any>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
+  const [selectedFarmerId, setSelectedFarmerId] = useState<string | null>(null);
+  const [isFarmerModalOpen, setIsFarmerModalOpen] = useState(false);
   const {
     activityFilter,
     setActivityFilter,
@@ -438,6 +441,10 @@ function DashboardPage() {
               onPageChange={setFarmerPage}
               onPreviousPage={goToPreviousFarmerPage}
               onNextPage={goToNextFarmerPage}
+              onInspect={(farmerId) => {
+                setSelectedFarmerId(farmerId);
+                setIsFarmerModalOpen(true);
+              }}
             />
             <ProductsTable
               products={filteredProducts}
@@ -555,6 +562,16 @@ function DashboardPage() {
           onReject={handleReject}
         />
       )}
+
+      {/* Farmer Detail Modal */}
+      <FarmerDetailModal
+        isOpen={isFarmerModalOpen}
+        farmerId={selectedFarmerId}
+        onClose={() => {
+          setIsFarmerModalOpen(false);
+          setSelectedFarmerId(null);
+        }}
+      />
     </div>
   );
 }
