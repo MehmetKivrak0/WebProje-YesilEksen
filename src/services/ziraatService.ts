@@ -10,6 +10,7 @@ export interface DashboardStats {
         newApplications: number;
         inspections: number;
         missingDocuments: number;
+        rejected: number;
         totalApplications: number;
         approved: number;
     };
@@ -130,6 +131,24 @@ export const ziraatService = {
             throw new Error('Geçersiz başvuru ID\'si');
         }
         const response = await api.post(`/ziraat/farms/reject/${encodeURIComponent(cleanId)}`, data);
+        return response.data;
+    },
+
+    sendBelgeEksikMessage: async (id: string, data: { belgeMessages: Array<{ belgeId: string; farmerMessage: string; adminNote: string }> }): Promise<{ success: boolean; message: string }> => {
+        const cleanId = String(id).trim();
+        if (!cleanId) {
+            throw new Error('Geçersiz başvuru ID\'si');
+        }
+        const response = await api.post(`/ziraat/farms/belge-eksik/${encodeURIComponent(cleanId)}`, data);
+        return response.data;
+    },
+
+    updateDocumentStatus: async (belgeId: string, data: { status: string; reason?: string; adminNote?: string }): Promise<{ success: boolean; message: string }> => {
+        const cleanId = String(belgeId).trim();
+        if (!cleanId) {
+            throw new Error('Geçersiz belge ID\'si');
+        }
+        const response = await api.put(`/ziraat/documents/${encodeURIComponent(cleanId)}`, data);
         return response.data;
     },
 

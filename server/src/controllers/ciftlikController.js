@@ -57,12 +57,12 @@ const getPanelStats = async (req, res) => {
                 s.birim_fiyat,
                 s.toplam_tutar,
                 s.durum,
-                s.olusturma_tarihi
+                s.olusturma
             FROM siparisler s
             JOIN urunler u ON s.urun_id = u.id
             JOIN firmalar f ON s.firma_id = f.id
             WHERE u.ciftlik_id = $1
-            ORDER BY s.olusturma_tarihi DESC
+            ORDER BY s.olusturma DESC
             LIMIT 5`,
             [ciftlik_id]
         );
@@ -122,7 +122,7 @@ const getMyProducts = async (req, res) => {
                 u.kategori,
                 u.durum,
                 u.resim_url,
-                u.olusturma_tarihi,
+                u.olusturma,
                 COUNT(t.id) as teklif_sayisi
             FROM urunler u
             LEFT JOIN teklifler t ON u.id = t.urun_id
@@ -148,7 +148,7 @@ const getMyProducts = async (req, res) => {
             paramIndex++;
         }
 
-        queryText += ` GROUP BY u.id ORDER BY u.olusturma_tarihi DESC`;
+        queryText += ` GROUP BY u.id ORDER BY u.olusturma DESC`;
         queryText += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
         queryParams.push(limit, offset);
 

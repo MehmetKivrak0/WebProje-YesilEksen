@@ -9,6 +9,7 @@ const {
     rejectProduct,
     approveFarm,
     rejectFarm,
+    sendBelgeEksikMessage,
     getRegisteredFarmers,
     getDashboardProducts,
     getActivityLog,
@@ -27,11 +28,13 @@ router.post('/products/approve/:id', approveProduct);
 router.post('/products/reject/:id', rejectProduct);
 router.post('/farms/approve/:id', approveFarm);
 router.post('/farms/reject/:id', rejectFarm);
+// Özel route'ları genel route'lardan önce tanımla (belge-eksik, logs/all)
+router.post('/farms/belge-eksik/:id', sendBelgeEksikMessage);
+router.get('/farms/logs/all', getAllFarmLogs);
+router.get('/farms/:id/logs', getFarmLogs);
 router.get('/farmers/registered', getRegisteredFarmers);
 router.get('/dashboard/products', getDashboardProducts);
 router.get('/activity-log', getActivityLog);
-router.get('/farms/:id/logs', getFarmLogs);
-router.get('/farms/logs/all', getAllFarmLogs);
 router.put('/documents/:belgeId', updateDocumentStatus);
 
 module.exports = router;

@@ -14,8 +14,6 @@ function DashboardPage() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [productApplications, setProductApplications] = useState<ProductApplication[]>([]);
   const [farmApplications, setFarmApplications] = useState<FarmApplication[]>([]);
-  const [farmApplicationsTotal, setFarmApplicationsTotal] = useState(0);
-  const [rejectedFarmCount, setRejectedFarmCount] = useState(0);
   const [registeredFarmersData, setRegisteredFarmersData] = useState<any[]>([]);
   const [dashboardProductsData, setDashboardProductsData] = useState<any[]>([]);
   const [activityLogData, setActivityLogData] = useState<any[]>([]);
@@ -56,10 +54,10 @@ function DashboardPage() {
     setError(null);
     try {
       // Paralel olarak tüm verileri yükle - her isteği ayrı ayrı yakala
-      const [statsRes, productsRes, farmsRes, rejectedFarmsRes, farmersRes, dashboardProductsRes, activityRes] = await Promise.all([
+      const [statsRes, productsRes, farmsRes, farmersRes, dashboardProductsRes, activityRes] = await Promise.all([
         ziraatService.getDashboardStats().catch((err) => {
           console.error('Dashboard stats hatası:', err);
-          return { success: false, stats: { productSummary: { pending: 0, approved: 0, revision: 0 }, farmSummary: { newApplications: 0, inspections: 0, missingDocuments: 0, totalApplications: 0, approved: 0 }, totalFarmers: 0, totalProducts: 0 } };
+          return { success: false, stats: { productSummary: { pending: 0, approved: 0, revision: 0 }, farmSummary: { newApplications: 0, inspections: 0, missingDocuments: 0, rejected: 0, totalApplications: 0, approved: 0 }, totalFarmers: 0, totalProducts: 0 } };
         }),
         ziraatService.getProductApplications({ limit: 3 }).catch((err) => {
           console.error('Product applications hatası:', err);
@@ -67,10 +65,6 @@ function DashboardPage() {
         }),
         ziraatService.getFarmApplications({ limit: 3 }).catch((err) => {
           console.error('Farm applications hatası:', err);
-          return { success: false, applications: [], pagination: {} };
-        }),
-        ziraatService.getFarmApplications({ limit: 1, status: 'reddedildi' }).catch((err) => {
-          console.error('Rejected farm applications hatası:', err);
           return { success: false, applications: [], pagination: {} };
         }),
         ziraatService.getRegisteredFarmers().catch((err) => {
@@ -92,8 +86,6 @@ function DashboardPage() {
       }
       setProductApplications(productsRes.applications || []);
       setFarmApplications(farmsRes.applications || []);
-      setFarmApplicationsTotal(farmsRes.pagination?.total ?? 0);
-      setRejectedFarmCount(rejectedFarmsRes.pagination?.total ?? 0);
       
       // API'den gelen çiftçileri frontend formatına map et
       if (farmersRes.success && farmersRes.farmers && farmersRes.farmers.length > 0) {
@@ -187,13 +179,10 @@ function DashboardPage() {
     { label: 'Reddedilen', value: dashboardStats?.productSummary?.revision ?? 0 },
   ];
 
-  const totalFarmApplications =
-    dashboardStats?.farmSummary?.totalApplications ?? farmApplicationsTotal;
-
   const farmApprovalStats = [
     { label: 'Yeni Başvuru', value: dashboardStats?.farmSummary?.newApplications ?? 0 },
     { label: 'Onaylanan Çiftlik', value: dashboardStats?.farmSummary?.approved ?? 0 },
-    { label: 'Reddedilen Çiftlik', value: rejectedFarmCount },
+    { label: 'Eksik Belge', value: dashboardStats?.farmSummary?.missingDocuments ?? 0 },
   ];
 
   const handleProductRowClick = (row: any) => {
@@ -301,6 +290,7 @@ function DashboardPage() {
                         newApplications: 0,
                         inspections: 0,
                         missingDocuments: 0,
+                        rejected: 0,
                         totalApplications: 0,
                         approved: 0,
                       }
@@ -411,7 +401,7 @@ function DashboardPage() {
                         onClick={() => handleFarmRowClick({
                           ...row,
                           status: formatStatus(row.status),
-                          inspectionDate: row.inspectionDate ? new Date(row.inspectionDate).toLocaleDateString('tr-TR') : 'Bekleniyor',
+                          inspectionDate: row.lastUpdate ? new Date(row.lastUpdate).toLocaleDateString('tr-TR') : 'Bekleniyor',
                         })}
                         className="cursor-pointer transition-colors hover:bg-primary/5 dark:hover:bg-primary/10"
                       >
@@ -420,7 +410,7 @@ function DashboardPage() {
                         <td className="px-4 py-3">
                           <span className={getStatusClass(row.status)}>{formatStatus(row.status)}</span>
                         </td>
-                        <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.inspectionDate ? new Date(row.inspectionDate).toLocaleDateString('tr-TR') : 'Bekleniyor'}</td>
+                        <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.lastUpdate ? new Date(row.lastUpdate).toLocaleDateString('tr-TR') : 'Bekleniyor'}</td>
                       </tr>
                     ))}
                   </tbody>

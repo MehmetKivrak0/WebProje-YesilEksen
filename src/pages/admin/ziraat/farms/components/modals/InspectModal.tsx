@@ -97,6 +97,7 @@ function InspectModal({
     }
   };
 
+
   return (
     <div className="fixed inset-0 z-30 flex items-start justify-end bg-black/40 px-4 py-8 sm:px-8">
       <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-border-light bg-background-light shadow-2xl dark:border-border-dark dark:bg-background-dark">
@@ -201,7 +202,6 @@ function InspectModal({
             <div className="grid gap-4">
               {application.documents && application.documents.length > 0 ? (
                 application.documents.map((document) => {
-                
                 // Dosya adını URL'den çıkar - URL formatı: /api/documents/file/farmer/filename.png veya tam URL
                 let fileName: string | null = null;
                 if (document.url) {
@@ -257,6 +257,41 @@ function InspectModal({
                                   <span className="material-symbols-outlined text-sm">warning</span>
                                   <span>Belge henüz yüklenmemiş</span>
                                 </p>
+                              )}
+                              
+                              {/* Admin Notları ve Red Nedenleri */}
+                              {((document.adminNote && document.adminNote.trim()) || 
+                                (document.redNedeni && document.redNedeni.trim()) || 
+                                (document.yoneticiNotu && document.yoneticiNotu.trim())) && (
+                                <div className="mt-3 space-y-2 border-t border-border-light pt-3 dark:border-border-dark">
+                                  {document.adminNote && document.adminNote.trim() && (
+                                    <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-900/20">
+                                      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                        <span className="material-symbols-outlined text-sm">note</span>
+                                        <span>Admin Notu</span>
+                                      </div>
+                                      <p className="text-xs text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{document.adminNote.trim()}</p>
+                                    </div>
+                                  )}
+                                  {document.redNedeni && document.redNedeni.trim() && (
+                                    <div className="rounded-lg bg-red-50 p-2 dark:bg-red-900/20">
+                                      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-300">
+                                        <span className="material-symbols-outlined text-sm">cancel</span>
+                                        <span>Red Nedeni</span>
+                                      </div>
+                                      <p className="text-xs text-red-900 dark:text-red-200 whitespace-pre-wrap">{document.redNedeni.trim()}</p>
+                                    </div>
+                                  )}
+                                  {document.yoneticiNotu && document.yoneticiNotu.trim() && (
+                                    <div className="rounded-lg bg-purple-50 p-2 dark:bg-purple-900/20">
+                                      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-purple-700 dark:text-purple-300">
+                                        <span className="material-symbols-outlined text-sm">admin_panel_settings</span>
+                                        <span>Yönetici Notu</span>
+                                      </div>
+                                      <p className="text-xs text-purple-900 dark:text-purple-200 whitespace-pre-wrap">{document.yoneticiNotu.trim()}</p>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>

@@ -377,7 +377,7 @@ const register = async (req, res) => {
                 const reddedilenBasvuruResult = await client.query(
                     `SELECT id, durum FROM ciftlik_basvurulari 
                      WHERE kullanici_id = $1 AND durum = 'reddedildi'
-                     ORDER BY guncelleme DESC, olusturma_tarihi DESC 
+                     ORDER BY guncelleme DESC, olusturma DESC 
                      LIMIT 1`,
                     [user.id]
                 );
@@ -390,7 +390,7 @@ const register = async (req, res) => {
                     await client.query(
                         `UPDATE ciftlik_basvurulari 
                          SET ciftlik_adi = $1, sahip_adi = $2, konum = $3, durum = 'ilk_inceleme', 
-                             olusturma_tarihi = CURRENT_TIMESTAMP, guncelleme = CURRENT_TIMESTAMP,
+                             olusturma = CURRENT_TIMESTAMP, guncelleme = CURRENT_TIMESTAMP,
                              red_nedeni = NULL, notlar = NULL
                          WHERE id = $4`,
                         [ciftlikName, sahipAdi, ciftlikAdres, basvuruId]
@@ -964,7 +964,7 @@ const getMe = async (req, res) => {
         const userId = req.user.id;
 
         const result = await pool.query(
-            `SELECT id, ad, soyad, eposta, telefon, rol, durum, olusturma_tarihi, son_giris
+            `SELECT id, ad, soyad, eposta, telefon, rol, durum, olusturma, son_giris
             FROM kullanicilar 
             WHERE id = $1`,
             [userId]

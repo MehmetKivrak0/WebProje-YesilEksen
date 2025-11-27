@@ -56,6 +56,7 @@ export type FarmSummary = {
   newApplications: number;
   inspections: number;
   missingDocuments: number;
+  rejected: number;
   totalApplications: number;
   approved: number;
 };

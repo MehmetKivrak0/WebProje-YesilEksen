@@ -48,12 +48,12 @@ const getPanelStats = async (req, res) => {
                    s.birim_fiyat,
                    s.toplam_tutar,
                    s.durum,
-                   s.olusturma_tarihi
+                   s.olusturma
                FROM siparisler s
                JOIN urunler u ON s.urun_id = u.id
                JOIN ciftlikler c ON u.ciftlik_id = c.id
                WHERE s.firma_id = $1
-               ORDER BY s.olusturma_tarihi DESC
+               ORDER BY s.olusturma DESC
                LIMIT 5`,
                [firmaId]
           );
@@ -93,7 +93,7 @@ const getBasvuruStatus = async (rep, res) => {
                f.id,
                f.ad,
                f.durum,
-               f.olusturma_tarihi,
+               f.olusturma,
                k.eposta,
                k.telefon,
                k.ad as kullanici_adi,
@@ -107,13 +107,14 @@ const getBasvuruStatus = async (rep, res) => {
           if (result.rowCount === 0) {
                return res.status(404).json({ message: 'Firma bulunamadı' });
           }
+          const firma = result.rows[0];
           res.json({
                success: true,
                firma: {
                     id: firma.id,
                     ad: firma.ad,
                     durum: firma.durum,
-                    olusturmaTarihi: firma.olusturma_tarihi,
+                    olusturmaTarihi: firma.olusturma,
                     yetkili: {
                          ad: firma.kullanici_adi,
                          soyad: firma.kullanici_soyadi,

@@ -6,17 +6,23 @@ import ApplicationTable from './components/ApplicationTable';
 import InspectModal from './components/modals/InspectModal';
 import RejectModal from './components/modals/RejectModal';
 import FarmLogModal from './components/modals/FarmLogModal';
+import BelgeEksikModal from './components/modals/BelgeEksikModal';
 import FarmToast from './components/FarmToast';
 import { useFarmApplications } from './hooks/useFarmApplications';
+import type { FarmApplication } from './types';
 
 function FarmApplicationsPage() {
   const [showAllLogs, setShowAllLogs] = useState(false);
+  const [selectedBelgeEksikApplication, setSelectedBelgeEksikApplication] = useState<FarmApplication | null>(null);
   const {
     selectedStatus,
     setSelectedStatus,
     applications,
     allApplications,
     approvedFarmCount,
+    pendingCount,
+    belgeEksikCount,
+    rejectedCount,
     inspectedApplication,
     setInspectedApplication,
     rejectedApplication,
@@ -27,6 +33,8 @@ function FarmApplicationsPage() {
     closeInspectModal,
     handleReject,
     handleQuickApprove,
+    loadStats,
+    loadApplications,
     loading,
     error,
     approvingId,
@@ -71,6 +79,9 @@ function FarmApplicationsPage() {
           <ApplicationSummaryCards 
             applications={allApplications || applications} 
             approvedFarmCount={approvedFarmCount}
+            pendingCount={pendingCount}
+            belgeEksikCount={belgeEksikCount}
+            rejectedCount={rejectedCount}
           />
 
           <div className="rounded-xl border border-border-light bg-background-light dark:border-border-dark dark:bg-background-dark">
@@ -93,6 +104,7 @@ function FarmApplicationsPage() {
                 onInspect={setInspectedApplication}
                 onReject={setRejectedApplication}
                 onQuickApprove={handleQuickApprove}
+                onBelgeEksik={setSelectedBelgeEksikApplication}
                 rejectingId={rejectingId}
                 approvingId={approvingId}
               />
@@ -124,6 +136,20 @@ function FarmApplicationsPage() {
       {showAllLogs && (
         <FarmLogModal
           onClose={() => setShowAllLogs(false)}
+        />
+      )}
+
+      {selectedBelgeEksikApplication && (
+        <BelgeEksikModal
+          application={selectedBelgeEksikApplication}
+          onClose={async () => {
+            setSelectedBelgeEksikApplication(null);
+            await loadApplications();
+          }}
+          onSuccess={async () => {
+            await loadStats();
+            await loadApplications();
+          }}
         />
       )}
 

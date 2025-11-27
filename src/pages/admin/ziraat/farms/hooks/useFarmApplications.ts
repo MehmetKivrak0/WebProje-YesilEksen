@@ -85,6 +85,9 @@ export function useFarmApplications() {
   const [records, setRecords] = useState<FarmApplication[]>([]);
   const [allApplications, setAllApplications] = useState<FarmApplication[]>([]); // İstatistikler için tüm başvurular
   const [approvedFarmCount, setApprovedFarmCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [belgeEksikCount, setBelgeEksikCount] = useState(0);
+  const [rejectedCount, setRejectedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inspectedApplication, setInspectedApplication] = useState<FarmApplication | null>(null);
@@ -101,7 +104,7 @@ export function useFarmApplications() {
   }, [selectedStatus]);
 
   useEffect(() => {
-    loadApprovedFarmCount();
+    loadStats();
   }, []);
 
   const loadApplications = async () => {
@@ -148,14 +151,17 @@ export function useFarmApplications() {
     }
   };
 
-  const loadApprovedFarmCount = async () => {
+  const loadStats = async () => {
     try {
       const statsResponse = await ziraatService.getDashboardStats();
       if (statsResponse.success) {
         setApprovedFarmCount(statsResponse.stats?.farmSummary?.approved ?? 0);
+        setPendingCount(statsResponse.stats?.farmSummary?.newApplications ?? 0);
+        setBelgeEksikCount(statsResponse.stats?.farmSummary?.missingDocuments ?? 0);
+        setRejectedCount(statsResponse.stats?.farmSummary?.rejected ?? 0);
       }
     } catch (err) {
-      console.error('Onaylı çiftlik sayısı yüklenemedi:', err);
+      console.error('İstatistikler yüklenemedi:', err);
     }
   };
 
@@ -233,7 +239,7 @@ export function useFarmApplications() {
         await loadApplications();
 
         // İstatistikleri güncelle (onaylanan çiftlik sayısı)
-        await loadApprovedFarmCount();
+        await loadStats();
       } else {
         const errorMessage = response.message || 'Onay işlemi başarısız oldu';
         setError(errorMessage);
@@ -290,6 +296,9 @@ export function useFarmApplications() {
         // Listeyi yenile
         await loadApplications();
         
+        // İstatistikleri güncelle
+        await loadStats();
+        
         // Modal'ı kapat ve state'i temizle
         setRejectedApplication(null);
         setRejectReason('');
@@ -327,6 +336,9 @@ export function useFarmApplications() {
     applications: records,
     allApplications,
     approvedFarmCount,
+    pendingCount,
+    belgeEksikCount,
+    rejectedCount,
     inspectedApplication,
     setInspectedApplication,
     rejectedApplication,
@@ -338,6 +350,8 @@ export function useFarmApplications() {
     handleApprove,
     handleReject,
     handleQuickApprove,
+    loadStats,
+    loadApplications,
     loading,
     error,
     approvingId,

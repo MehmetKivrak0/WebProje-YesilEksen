@@ -17,7 +17,7 @@ function SummaryCards({ productSummary, farmSummary }: SummaryCardsProps) {
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20">
-            <span className="material-symbols-outlined text-2xl text-primary">inventory</span>
+            <span className="material-symbols-outlined text-2xl text-primary">shopping_bag</span>
           </div>
         </div>
         <div className="mt-4">
@@ -35,7 +35,7 @@ function SummaryCards({ productSummary, farmSummary }: SummaryCardsProps) {
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20">
-            <span className="material-symbols-outlined text-2xl text-primary">warning</span>
+            <span className="material-symbols-outlined text-2xl text-primary">agriculture</span>
           </div>
         </div>
         <div className="mt-4">
@@ -52,7 +52,7 @@ function SummaryCards({ productSummary, farmSummary }: SummaryCardsProps) {
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20">
-            <span className="material-symbols-outlined text-2xl text-primary">verified</span>
+            <span className="material-symbols-outlined text-2xl text-primary">check_circle</span>
           </div>
         </div>
         <div className="mt-4">
@@ -70,7 +70,7 @@ function SummaryCards({ productSummary, farmSummary }: SummaryCardsProps) {
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20">
-            <span className="material-symbols-outlined text-2xl text-primary">task_alt</span>
+            <span className="material-symbols-outlined text-2xl text-primary">home</span>
           </div>
         </div>
         <div className="mt-4">

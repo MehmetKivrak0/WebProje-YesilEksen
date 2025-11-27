@@ -15,6 +15,8 @@ export type FarmDocument = {
   belgeId?: string;
   farmerNote?: string;
   adminNote?: string;
+  redNedeni?: string;
+  yoneticiNotu?: string;
   zorunlu?: boolean;
 };
 

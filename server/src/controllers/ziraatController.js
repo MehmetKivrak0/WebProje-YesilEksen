@@ -143,6 +143,8 @@ const getDashboardStats = async (req, res) => {
             SELECT 
                 COUNT(*) FILTER (WHERE durum = 'ilk_inceleme') AS "newApplications",
                 COUNT(*) FILTER (WHERE durum = 'denetimde') AS "inspections",
+                COUNT(*) FILTER (WHERE durum = 'belge_eksik') AS "missingDocuments",
+                COUNT(*) FILTER (WHERE durum = 'reddedildi') AS "rejected",
                 COUNT(*) AS "totalApplications"
             FROM ciftlik_basvurulari
         `);
@@ -175,6 +177,8 @@ const getDashboardStats = async (req, res) => {
                 farmSummary: {
                     newApplications: parseInt(farmStats.rows[0].newApplications || farmStats.rows[0].newapplications || 0),
                     inspections: parseInt(farmStats.rows[0].inspections || 0),
+                    missingDocuments: parseInt(farmStats.rows[0].missingDocuments || farmStats.rows[0].missingdocuments || 0),
+                    rejected: parseInt(farmStats.rows[0].rejected || 0),
                     totalApplications: parseInt(farmStats.rows[0].totalApplications || farmStats.rows[0].totalapplications || 0),
                     approved: parseInt(approvedFarmsCount.rows[0].approved || 0)
                 },
@@ -383,6 +387,9 @@ const getFarmApplications = async (req, res) => {
         const limitParamIndex = paramIndex;
         const offsetParamIndex = paramIndex + 1;
         params.push(limit, offset);
+        
+        // Temiz ve güvenli SQL sorgusu
+        // GROUP BY kuralı: Aggregate fonksiyonlar (json_agg) dışındaki tüm SELECT kolonları GROUP BY'da olmalı
         const dataQuery = `
             SELECT 
                 cb.id,
@@ -390,7 +397,7 @@ const getFarmApplications = async (req, res) => {
                 cb.sahip_adi as owner,
                 cb.durum as status,
                 cb.guncelleme as "lastUpdate",
-                cb.olusturma as "createdAt",
+                cb.basvuru_tarihi as "createdAt",
                 cb.id::text as "applicationNumber",
                 cb.konum as sector,
                 EXTRACT(YEAR FROM cb.basvuru_tarihi)::INTEGER as "establishmentYear",
@@ -400,6 +407,7 @@ const getFarmApplications = async (req, res) => {
                 cb.basvuru_tarihi as "applicationDate",
                 '' as "taxNumber",
                 COALESCE(cb.notlar, '') as description,
+                -- Belgeleri JSON array olarak topla
                 COALESCE(
                     json_agg(
                         json_build_object(
@@ -412,8 +420,10 @@ const getFarmApplications = async (req, res) => {
                             END,
                             'url', b.dosya_yolu,
                             'belgeId', b.id::text,
-                            'farmerNote', COALESCE(b.red_nedeni, b.kullanici_notu, ''),
+                            'farmerNote', COALESCE(b.kullanici_notu, ''),
                             'adminNote', COALESCE(b.yonetici_notu, ''),
+                            'redNedeni', COALESCE(b.red_nedeni, ''),
+                            'yoneticiNotu', COALESCE(b.yonetici_notu, ''),
                             'zorunlu', COALESCE(b.zorunlu, bt.zorunlu, TRUE)
                         ) ORDER BY COALESCE(bt.ad, b.ad, '')
                     ) FILTER (WHERE b.id IS NOT NULL),
@@ -424,7 +434,20 @@ const getFarmApplications = async (req, res) => {
             LEFT JOIN belgeler b ON b.basvuru_id::text = cb.id::text AND b.basvuru_tipi = 'ciftlik_basvurusu'
             LEFT JOIN belge_turleri bt ON b.belge_turu_id = bt.id AND bt.id IS NOT NULL
             ${whereClause}
-            GROUP BY cb.id, cb.ciftlik_adi, cb.sahip_adi, cb.durum, cb.guncelleme, cb.konum, cb.basvuru_tarihi, k.eposta, k.telefon, cb.notlar
+            -- GROUP BY: Aggregate olmayan tüm kolonlar burada olmalı
+            -- EXTRACT() fonksiyonu da GROUP BY'da olmalı çünkü SELECT'te kullanılıyor
+            GROUP BY 
+                cb.id, 
+                cb.ciftlik_adi, 
+                cb.sahip_adi, 
+                cb.durum, 
+                cb.guncelleme, 
+                cb.konum, 
+                cb.basvuru_tarihi, 
+                k.eposta, 
+                k.telefon, 
+                cb.notlar,
+                EXTRACT(YEAR FROM cb.basvuru_tarihi)
             ORDER BY cb.basvuru_tarihi DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
@@ -510,16 +533,33 @@ const getFarmApplications = async (req, res) => {
             query: error.query || 'N/A',
             code: error.code,
             detail: error.detail,
-            hint: error.hint
+            hint: error.hint,
+            position: error.position,
+            internalQuery: error.internalQuery
         });
+        
+        // SQL hatası için daha detaylı mesaj
+        let errorMessage = 'Çiftlik başvuruları alınamadı';
+        if (error.code === '42703') {
+            errorMessage = 'SQL hatası: Kolon bulunamadı. Lütfen veritabanı şemasını kontrol edin.';
+        } else if (error.code === '42P01') {
+            errorMessage = 'SQL hatası: Tablo bulunamadı. Lütfen veritabanı şemasını kontrol edin.';
+        } else if (error.detail) {
+            errorMessage = `SQL hatası: ${error.detail}`;
+        } else if (error.message) {
+            errorMessage = `Hata: ${error.message}`;
+        }
+        
         res.status(500).json({
             success: false,
-            message: 'Çiftlik başvuruları alınamadı',
+            message: errorMessage,
             error: process.env.NODE_ENV === 'development' ? {
                 message: error.message,
                 detail: error.detail,
                 hint: error.hint,
-                code: error.code
+                code: error.code,
+                position: error.position,
+                query: error.query
             } : undefined
         });
     }
@@ -949,6 +989,164 @@ const rejectFarm = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Çiftlik reddetme işlemi başarısız',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        client.release();
+    }
+};
+
+// Send Belge Eksik Message - POST /api/ziraat/farms/belge-eksik/:id
+// Seçilen belgeleri eksik olarak işaretle, mesaj gönder ve çiftlik durumunu "belge_eksik" yap
+const sendBelgeEksikMessage = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const { id } = req.params; // basvuru_id
+        const { belgeMessages } = req.body;
+
+        if (!belgeMessages || !Array.isArray(belgeMessages) || belgeMessages.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                message: 'En az bir belge seçilmelidir'
+            });
+        }
+
+        // Her belge mesajını kontrol et
+        for (const belgeMsg of belgeMessages) {
+            if (!belgeMsg.belgeId || !belgeMsg.farmerMessage || !belgeMsg.farmerMessage.trim()) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Her belge için çiftçiye mesaj zorunludur'
+                });
+            }
+        }
+
+        // Başvuru bilgilerini al
+        const basvuruResult = await client.query(
+            `SELECT id, durum, ciftlik_adi, sahip_adi, kullanici_id 
+             FROM ciftlik_basvurulari 
+             WHERE id = $1`,
+            [id]
+        );
+
+        if (basvuruResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftlik başvurusu bulunamadı'
+            });
+        }
+
+        const basvuru = basvuruResult.rows[0];
+        const kullaniciId = basvuru.kullanici_id;
+
+        console.log(`📄 [BELGE EKSIK] Belge eksik mesajı gönderiliyor:`, {
+            basvuru_id: id,
+            ciftlik_adi: basvuru.ciftlik_adi,
+            belge_sayisi: belgeMessages.length
+        });
+
+        // Seçilen belgeleri güncelle (durum = 'Eksik', kullanici_notu = çiftçi mesajı, yonetici_notu = admin notu)
+        for (const belgeMsg of belgeMessages) {
+            const farmerMsg = belgeMsg.farmerMessage?.trim() || '';
+            const adminNote = belgeMsg.adminNote?.trim() || null;
+            
+            console.log(`📝 [BELGE EKSIK] Belge güncelleniyor:`, {
+                belgeId: belgeMsg.belgeId,
+                basvuru_id: id,
+                farmerMessage: farmerMsg.substring(0, 50),
+                adminNote: adminNote ? adminNote.substring(0, 50) : 'null'
+            });
+            
+            const updateResult = await client.query(
+                `UPDATE belgeler 
+                 SET durum = 'Eksik', 
+                     kullanici_notu = $1, 
+                     yonetici_notu = $2,
+                     guncelleme = CURRENT_TIMESTAMP
+                 WHERE id = $3::uuid AND basvuru_id = $4::uuid AND basvuru_tipi = 'ciftlik_basvurusu'
+                 RETURNING id, kullanici_notu, yonetici_notu`,
+                [
+                    farmerMsg, 
+                    adminNote,
+                    belgeMsg.belgeId, 
+                    id
+                ]
+            );
+            
+            if (updateResult.rowCount === 0) {
+                console.error(`❌ [BELGE EKSIK] Belge güncellenemedi - eşleşen kayıt bulunamadı:`, {
+                    belgeId: belgeMsg.belgeId,
+                    basvuru_id: id
+                });
+            } else {
+                console.log(`✅ [BELGE EKSIK] Belge güncellendi:`, {
+                    belgeId: updateResult.rows[0].id,
+                    kullanici_notu: updateResult.rows[0].kullanici_notu?.substring(0, 50),
+                    yonetici_notu: updateResult.rows[0].yonetici_notu?.substring(0, 50) || 'null'
+                });
+            }
+        }
+
+        // Çiftlik başvurusu durumunu "belge_eksik" yap
+        await client.query(
+            `UPDATE ciftlik_basvurulari 
+             SET durum = 'belge_eksik', guncelleme = CURRENT_TIMESTAMP
+             WHERE id = $1`,
+            [id]
+        );
+
+        // Transaction'ı commit et
+        await client.query('COMMIT');
+        console.log(`✅ [BELGE EKSIK] İşlem başarılı!`);
+
+        // Log kaydı oluştur (COMMIT'ten SONRA - transaction dışında)
+        try {
+            const logClient = await pool.connect();
+            try {
+                const belgeIsimleri = belgeMessages.map(bm => {
+                    // Belge ismini bul (eğer mümkünse)
+                    return bm.belgeId;
+                }).join(', ');
+                
+                await logCiftlikActivity(logClient, {
+                    kullanici_id: req.user?.id,
+                    ciftlik_id: null,
+                    basvuru_id: id,
+                    islem_tipi: 'durum_degisikligi',
+                    eski_durum: basvuru.durum,
+                    yeni_durum: 'belge_eksik',
+                    aciklama: `Çiftlik başvurusu "Belge Eksik" durumuna alındı. ${belgeMessages.length} belge için mesaj gönderildi.`,
+                    ip_adresi: req.ip,
+                    user_agent: req.get('user-agent')
+                });
+                console.log(`✅ [BELGE EKSIK] Log kaydı oluşturuldu`);
+            } finally {
+                logClient.release();
+            }
+        } catch (logError) {
+            console.error('⚠️ [BELGE EKSIK] Log kaydı hatası (ana işlem başarılı):', logError.message);
+        }
+
+        res.json({
+            success: true,
+            message: 'Belge eksik mesajı gönderildi ve çiftlik durumu güncellendi'
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ [BELGE EKSIK] İşlem hatası:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            detail: error.detail
+        });
+        res.status(500).json({
+            success: false,
+            message: 'Belge eksik mesajı gönderilemedi',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     } finally {
@@ -1889,6 +2087,7 @@ module.exports = {
     rejectProduct,
     approveFarm,
     rejectFarm,
+    sendBelgeEksikMessage,
     getRegisteredFarmers,
     getDashboardProducts,
     getActivityLog,
