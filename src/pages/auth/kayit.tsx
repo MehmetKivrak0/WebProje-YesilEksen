@@ -81,6 +81,43 @@ function Kayit() {
     }
   }, [searchParams]);
 
+  // Dosya adını temizleme fonksiyonu (Türkçe karakterleri ve özel karakterleri kaldırır)
+  const sanitizeFileName = (fileName: string): string => {
+    // Dosya adını ve uzantısını ayır
+    const lastDotIndex = fileName.lastIndexOf('.');
+    const nameWithoutExt = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+    const extension = lastDotIndex > 0 ? fileName.substring(lastDotIndex) : '';
+
+    // Türkçe karakterleri İngilizce karşılıklarına çevir
+    const turkishToEnglish: { [key: string]: string } = {
+      'ç': 'c', 'Ç': 'C',
+      'ğ': 'g', 'Ğ': 'G',
+      'ı': 'i', 'İ': 'I',
+      'ö': 'o', 'Ö': 'O',
+      'ş': 's', 'Ş': 'S',
+      'ü': 'u', 'Ü': 'U'
+    };
+
+    let sanitized = nameWithoutExt
+      .split('')
+      .map(char => turkishToEnglish[char] || char)
+      .join('');
+
+    // Özel karakterleri ve boşlukları temizle (sadece harf, sayı, tire ve alt çizgi bırak)
+    sanitized = sanitized
+      .replace(/[^a-zA-Z0-9_-]/g, '_') // Özel karakterleri alt çizgi ile değiştir
+      .replace(/_+/g, '_') // Birden fazla alt çizgiyi tek alt çizgiye çevir
+      .replace(/^_+|_+$/g, ''); // Başta ve sonda alt çizgileri kaldır
+
+    // Eğer dosya adı boş kalırsa, varsayılan bir isim ver
+    if (!sanitized) {
+      sanitized = 'dosya';
+    }
+
+    // Uzantıyı ekle ve döndür
+    return sanitized + extension;
+  };
+
   // Telefon numarası formatlama fonksiyonu
   const formatPhoneNumber = (value: string): string => {
     // Sadece sayıları al
@@ -199,8 +236,15 @@ function Kayit() {
           return;
         }
         
+        // Dosya adını temizle (Türkçe karakterleri ve özel karakterleri kaldır)
+        const sanitizedFileName = sanitizeFileName(file.name);
+        const sanitizedFile = new File([file], sanitizedFileName, {
+          type: file.type,
+          lastModified: file.lastModified
+        });
+        
         // Başarılı yükleme
-        setFormData(prev => ({ ...prev, [name]: file }));
+        setFormData(prev => ({ ...prev, [name]: sanitizedFile }));
         setToast({
           message: `${belgeAdi} başarıyla yüklendi (${fileSizeMB.toFixed(2)} MB)`,
           type: 'success',

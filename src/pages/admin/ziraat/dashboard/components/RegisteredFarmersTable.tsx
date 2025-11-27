@@ -55,23 +55,23 @@ function RegisteredFarmersTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border-light dark:border-border-dark">
+      <div className="rounded-lg border border-border-light dark:border-border-dark">
         <table className="w-full table-auto">
           <thead className="bg-background-light dark:bg-background-dark">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
                 Çiftçi Adı
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
                 Çiftlik Adı
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
                 Kayıt Tarihi
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
                 Durum
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-subtle-light dark:text-subtle-dark">
                 İşlemler
               </th>
             </tr>
@@ -79,19 +79,25 @@ function RegisteredFarmersTable({
           <tbody className="divide-y divide-border-light dark:divide-border-dark">
             {farmers.map((farmer) => (
               <tr key={farmer.id} className="transition-colors hover:bg-primary/5 dark:hover:bg-primary/10">
-                <td className="px-6 py-4 text-sm font-medium text-content-light dark:text-content-dark">{farmer.name}</td>
-                <td className="px-6 py-4 text-sm text-subtle-light dark:text-subtle-dark">{farmer.farm}</td>
-                <td className="px-6 py-4 text-sm text-subtle-light dark:text-subtle-dark">{farmer.registrationDate}</td>
-                <td className="px-6 py-4">
+                <td className="px-4 py-3 text-sm font-medium text-content-light dark:text-content-dark">
+                  {farmer.name}
+                </td>
+                <td className="px-4 py-3 text-sm text-subtle-light dark:text-subtle-dark">
+                  {farmer.farm}
+                </td>
+                <td className="px-4 py-3 text-sm text-subtle-light dark:text-subtle-dark">
+                  {farmer.registrationDate}
+                </td>
+                <td className="px-4 py-3">
                   <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${farmerStatusStyles[farmer.status]}`}>
                     {farmer.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="px-4 py-3 text-sm">
                   {onInspect ? (
                     <button
                       onClick={() => onInspect(farmer.id)}
-                      className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 hover:border-primary/50 dark:border-primary/40 dark:bg-primary/20 dark:hover:bg-primary/30"
                     >
                       İncele
                       <span className="material-symbols-outlined text-sm leading-none">visibility</span>
@@ -99,7 +105,7 @@ function RegisteredFarmersTable({
                   ) : (
                     <Link
                       to={farmer.detailPath}
-                      className="inline-flex items-center gap-1 font-medium text-primary transition-colors hover:text-primary/80"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 hover:border-primary/50 dark:border-primary/40 dark:bg-primary/20 dark:hover:bg-primary/30"
                     >
                       İncele
                       <span className="material-symbols-outlined text-sm leading-none">open_in_new</span>
@@ -110,7 +116,7 @@ function RegisteredFarmersTable({
             ))}
             {farmers.length === 0 && (
               <tr className="bg-background-light dark:bg-background-dark">
-                <td className="px-6 py-4 text-sm text-subtle-light dark:text-subtle-dark" colSpan={5}>
+                <td className="px-4 py-4 text-sm text-subtle-light dark:text-subtle-dark" colSpan={5}>
                   Aradığınız kriterlere uygun kayıtlı çiftçi bulunamadı.
                 </td>
               </tr>

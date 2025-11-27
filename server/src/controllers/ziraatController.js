@@ -704,6 +704,12 @@ const approveFarm = async (req, res) => {
                 ['aktif', basvuru.ciftlik_id]
             );
 
+            // Kullanıcının durumunu aktif yap
+            await client.query(
+                'UPDATE kullanicilar SET durum = $1, guncelleme = NOW() WHERE id = $2',
+                ['aktif', basvuru.kullanici_id]
+            );
+
             await client.query('COMMIT');
             return res.json({
                 success: true,
@@ -785,6 +791,17 @@ const approveFarm = async (req, res) => {
             durum: updateResult.rows[0].durum,
             ciftlik_id: updateResult.rows[0].ciftlik_id,
             onay_tarihi: updateResult.rows[0].onay_tarihi
+        });
+
+        // Çiftlik onaylandıktan sonra kullanıcının durumunu aktif yap
+        await client.query(
+            'UPDATE kullanicilar SET durum = $1, guncelleme = NOW() WHERE id = $2',
+            ['aktif', basvuru.kullanici_id]
+        );
+
+        console.log(`✅ [CIFTLIK ONAY] Kullanıcı durumu aktif yapıldı:`, {
+            kullanici_id: basvuru.kullanici_id,
+            eposta: basvuru.eposta
         });
 
         // Belgeleri ciftlik_id ile de bağla (onaylandıktan sonra)
@@ -1302,31 +1319,49 @@ const getFarmerDetails = async (req, res) => {
         const farmer = farmerResult.rows[0];
         const ciftlikId = farmer.ciftlik_id;
 
-        // Belgeleri al
+        // Belgeleri al - hem ciftlik_id hem de basvuru_id ile bağlı belgeleri getir
         const documentsQuery = `
             SELECT 
                 b.id as "belgeId",
                 b.ad as name,
-                b.dosya_yolu as url,
+                b.dosya_yolu,
                 b.durum as status,
                 b.kullanici_notu as "farmerNote",
                 b.yonetici_notu as "adminNote",
+                b.basvuru_id,
                 bt.ad as "belgeTuru",
                 bt.kod as "belgeKodu"
             FROM belgeler b
             LEFT JOIN belge_turleri bt ON b.belge_turu_id = bt.id
-            WHERE b.ciftlik_id = $1::uuid AND b.basvuru_tipi = 'ciftlik_basvurusu'
+            WHERE (b.ciftlik_id = $1::uuid OR b.basvuru_id IN (
+                SELECT id FROM ciftlik_basvurulari WHERE kullanici_id = $2::uuid
+            )) AND b.basvuru_tipi = 'ciftlik_basvurusu'
             ORDER BY b.olusturma DESC
         `;
 
-        const documentsResult = await pool.query(documentsQuery, [ciftlikId]);
+        const documentsResult = await pool.query(documentsQuery, [ciftlikId, farmer.kullanici_id]);
+
+        // Belgeler için URL oluştur - sadece path döndür (frontend'de base URL ile birleştirilecek)
+        const documentsWithUrl = documentsResult.rows.map(doc => {
+            let url = null;
+            if (doc.dosya_yolu) {
+                // Dosya yolundaki her segmenti ayrı ayrı encode et (slash'lar korunur)
+                const normalizedPath = doc.dosya_yolu.split('/').map(part => encodeURIComponent(part)).join('/');
+                // Sadece path döndür, /api ekleme (frontend'de ekleyecek)
+                url = `/documents/file/${normalizedPath}`;
+            }
+            return {
+                ...doc,
+                url
+            };
+        });
 
         res.json({
             success: true,
             farmer: {
                 ...farmer,
                 status: 'Onaylandı', // Kayıtlı çiftçiler için her zaman onaylandı
-                documents: documentsResult.rows
+                documents: documentsWithUrl
             }
         });
     } catch (error) {

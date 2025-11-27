@@ -79,6 +79,12 @@ Bu klasör, projede karşılaşılan sorunlar ve çözümlerinin dokümantasyonu
    - **Özellik:** Denetim sistemi kullanılmadığı için tüm denetim tabloları, kolonları, index'leri ve trigger'ları kaldırıldı
    - **Fayda:** Veritabanı yapısı sadeleştirildi, gereksiz tablolar kaldırıldı, bakım kolaylığı sağlandı
 
+16. **[Çiftçi Detay Modal - Belge Görüntüleme Sorunu](./ciftci-detay-modal-belge-goruntuleme-sorunu.md)** ✅
+   - **Tarih:** 2024-12-XX
+   - **Sorun:** Dashboard'daki çiftçi detay modal'ında belgeler görüntülenemiyordu, URL'lerde çift `/api/api/` hatası vardı, belge isimlerinde encoding sorunları vardı
+   - **Çözüm:** Belge sorgusu düzeltildi (hem ciftlik_id hem basvuru_id), URL oluşturma mantığı düzeltildi, belge isimleri decode edildi, modal tasarımı iyileştirildi ve pop-up belge görüntüleme eklendi
+   - **Fayda:** Belgeler artık düzgün görüntüleniyor, 404 hatası çözüldü, Türkçe karakterler düzgün görünüyor, kullanıcı deneyimi iyileştirildi
+
 ### 🗄️ Veritabanı Sorunları
 
 16. **[Veritabanı Güncelleme](./VERITABANI_GUNCELLEME.md)**
@@ -110,8 +116,8 @@ Yeni bir sorun ve çözüm dokümantasyonu eklerken:
 
 ## 📊 Sorun İstatistikleri
 
-- **Toplam Sorun:** 13
-- **Çözülen:** 12
+- **Toplam Sorun:** 16
+- **Çözülen:** 16
 - **Özellik Eklendi:** 5
 - **Veritabanı Temizleme:** 1
 - **Devam Eden:** 0
@@ -119,5 +125,5 @@ Yeni bir sorun ve çözüm dokümantasyonu eklerken:
 
 ---
 
-**Son Güncelleme:** 2024-11-22
+**Son Güncelleme:** 2024-12-XX
 

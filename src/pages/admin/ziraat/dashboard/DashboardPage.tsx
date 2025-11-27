@@ -401,12 +401,7 @@ function DashboardPage() {
                     {farmApplications.map((row) => (
                       <tr
                         key={row.id}
-                        onClick={() => handleFarmRowClick({
-                          ...row,
-                          status: formatStatus(row.status),
-                          inspectionDate: row.lastUpdate ? new Date(row.lastUpdate).toLocaleDateString('tr-TR') : 'Bekleniyor',
-                        })}
-                        className="cursor-pointer transition-colors hover:bg-primary/5 dark:hover:bg-primary/10"
+                        className="transition-colors hover:bg-primary/5 dark:hover:bg-primary/10"
                       >
                         <td className="px-4 py-3 font-medium text-content-light dark:text-content-dark">{row.name}</td>
                         <td className="px-4 py-3 text-subtle-light dark:text-subtle-dark">{row.owner}</td>
