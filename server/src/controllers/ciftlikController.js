@@ -645,6 +645,251 @@ const getRecentSales = async (req, res) => {
     }
 };
 
+// Çiftlik Profil Bilgilerini Getir
+// GET /api/ciftlik/profil
+const getCiftlikProfil = async (req, res) => {
+    try {
+        const user_id = req.user.id;
+
+        // Çiftlik bilgilerini getir
+        const ciftlikResult = await pool.query(
+            `SELECT 
+                c.id,
+                c.ad,
+                k.telefon,
+                c.adres,
+                c.alan,
+                c.kayit_tarihi,
+                c.aciklama,
+                c.website,
+                c.durum,
+                c.sehir_id,
+                c.enlem,
+                c.boylam,
+                c.yillik_gelir,
+                c.uretim_kapasitesi,
+                k.ad as sahibi_ad,
+                k.soyad as sahibi_soyad,
+                k.eposta as email,
+                s.ad as sehir_adi
+            FROM ciftlikler c
+            JOIN kullanicilar k ON c.kullanici_id = k.id
+            LEFT JOIN sehirler s ON c.sehir_id = s.id
+            WHERE c.kullanici_id = $1 AND c.silinme IS NULL`,
+            [user_id]
+        );
+
+        if (ciftlikResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftlik bulunamadı'
+            });
+        }
+
+        const ciftlik = ciftlikResult.rows[0];
+        const ciftlik_id = ciftlik.id;
+
+        // Sertifikaları getir
+        const sertifikalarResult = await pool.query(
+            `SELECT 
+                st.ad as sertifika_adi
+            FROM ciftlik_sertifikalari cs
+            JOIN sertifika_turleri st ON cs.sertifika_turu_id = st.id
+            WHERE cs.ciftlik_id = $1
+            ORDER BY st.ad`,
+            [ciftlik_id]
+        );
+
+        // Ürün türlerini getir (kategorilerden)
+        const urunTurleriResult = await pool.query(
+            `SELECT DISTINCT uk.ad as kategori
+            FROM urunler u
+            JOIN urun_kategorileri uk ON u.kategori_id = uk.id
+            WHERE u.ciftlik_id = $1 AND u.durum != 'silindi'
+            ORDER BY uk.ad`,
+            [ciftlik_id]
+        );
+
+        // Kuruluş yılı (kayıt_tarihi'nden)
+        const kurulusYili = ciftlik.kayit_tarihi 
+            ? new Date(ciftlik.kayit_tarihi).getFullYear().toString()
+            : null;
+
+        // Alan birimi (hektar olarak saklanıyor, dönüme çevir)
+        const alanHektar = parseFloat(ciftlik.alan) || 0;
+        const alanDonum = alanHektar * 10; // 1 hektar = 10 dönüm
+
+        res.json({
+            success: true,
+            profil: {
+                ad: ciftlik.ad,
+                sahibi: `${ciftlik.sahibi_ad} ${ciftlik.sahibi_soyad}`,
+                telefon: ciftlik.telefon || '',
+                email: ciftlik.email || '',
+                adres: ciftlik.adres || '',
+                alan: alanDonum > 0 ? alanDonum.toString() : '',
+                alanBirim: 'Dönüm',
+                kurulusYili: kurulusYili || '',
+                sehir_id: ciftlik.sehir_id || null,
+                sehir_adi: ciftlik.sehir_adi || '',
+                enlem: ciftlik.enlem ? parseFloat(ciftlik.enlem).toString() : '',
+                boylam: ciftlik.boylam ? parseFloat(ciftlik.boylam).toString() : '',
+                yillik_gelir: ciftlik.yillik_gelir ? parseFloat(ciftlik.yillik_gelir).toString() : '',
+                uretim_kapasitesi: ciftlik.uretim_kapasitesi ? parseFloat(ciftlik.uretim_kapasitesi).toString() : '',
+                urunTurleri: urunTurleriResult.rows.map(row => row.kategori),
+                sertifikalar: sertifikalarResult.rows.map(row => row.sertifika_adi),
+                dogrulanmis: ciftlik.durum === 'aktif',
+                aciklama: ciftlik.aciklama || '',
+                website: ciftlik.website || ''
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Çiftlik profil hatası:', error);
+        console.error('Hata detayı:', {
+            message: error.message,
+            stack: error.stack,
+            query: error.query || 'N/A',
+            code: error.code,
+            detail: error.detail,
+            hint: error.hint
+        });
+        res.status(500).json({
+            success: false,
+            message: 'Çiftlik profili alınamadı',
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                detail: error.detail,
+                hint: error.hint,
+                code: error.code
+            } : undefined
+        });
+    }
+};
+
+// Çiftlik Profil Bilgilerini Güncelle
+// PUT /api/ciftlik/profil
+const updateCiftlikProfil = async (req, res) => {
+    try {
+        const user_id = req.user.id;
+        const {
+            ad,
+            telefon,
+            adres,
+            alan,
+            alanBirim,
+            kurulusYili,
+            aciklama,
+            website
+        } = req.body;
+
+        // Çiftlik ID'sini bul
+        const ciftlikResult = await pool.query(
+            'SELECT id FROM ciftlikler WHERE kullanici_id = $1 AND silinme IS NULL',
+            [user_id]
+        );
+
+        if (ciftlikResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Çiftlik bulunamadı'
+            });
+        }
+
+        const ciftlik_id = ciftlikResult.rows[0].id;
+
+        // Alan birimini hektara çevir (dönüm -> hektar: 10'a böl)
+        let alanHektar = null;
+        if (alan) {
+            const alanValue = parseFloat(alan);
+            if (alanBirim === 'Dönüm') {
+                alanHektar = alanValue / 10; // Dönüm -> Hektar
+            } else if (alanBirim === 'Hektar') {
+                alanHektar = alanValue;
+            } else if (alanBirim === 'Dekar') {
+                alanHektar = alanValue / 10; // Dekar = Dönüm
+            }
+        }
+
+        // Kuruluş yılını DATE'e çevir
+        let kayitTarihi = null;
+        if (kurulusYili) {
+            kayitTarihi = `${kurulusYili}-01-01`;
+        }
+
+        // Çiftlik bilgilerini güncelle
+        const updateCiftlikResult = await pool.query(
+            `UPDATE ciftlikler 
+            SET 
+                ad = COALESCE($1, ad),
+                adres = COALESCE($2, adres),
+                alan = COALESCE($3, alan),
+                kayit_tarihi = COALESCE($4::DATE, kayit_tarihi),
+                sehir_id = COALESCE($5::SMALLINT, sehir_id),
+                enlem = COALESCE($6::DECIMAL, enlem),
+                boylam = COALESCE($7::DECIMAL, boylam),
+                yillik_gelir = COALESCE($8::DECIMAL, yillik_gelir),
+                uretim_kapasitesi = COALESCE($9::DECIMAL, uretim_kapasitesi),
+                aciklama = COALESCE($10, aciklama),
+                website = COALESCE($11, website),
+                guncelleme = NOW()
+            WHERE id = $12
+            RETURNING *`,
+            [
+                ad, 
+                adres, 
+                alanHektar, 
+                kayitTarihi, 
+                sehir_id || null,
+                enlem ? parseFloat(enlem) : null,
+                boylam ? parseFloat(boylam) : null,
+                yillik_gelir ? parseFloat(yillik_gelir) : null,
+                uretim_kapasitesi ? parseFloat(uretim_kapasitesi) : null,
+                aciklama, 
+                website, 
+                ciftlik_id
+            ]
+        );
+
+        // Telefon bilgisini kullanicilar tablosunda güncelle
+        if (telefon !== undefined && telefon !== null) {
+            await pool.query(
+                `UPDATE kullanicilar 
+                SET telefon = $1, guncelleme = NOW()
+                WHERE id = $2`,
+                [telefon, user_id]
+            );
+        }
+
+        res.json({
+            success: true,
+            message: 'Çiftlik profili başarıyla güncellendi',
+            profil: updateCiftlikResult.rows[0]
+        });
+
+    } catch (error) {
+        console.error('❌ Çiftlik profil güncelleme hatası:', error);
+        console.error('Hata detayı:', {
+            message: error.message,
+            stack: error.stack,
+            query: error.query || 'N/A',
+            code: error.code,
+            detail: error.detail,
+            hint: error.hint
+        });
+        res.status(500).json({
+            success: false,
+            message: 'Çiftlik profili güncellenemedi',
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                detail: error.detail,
+                hint: error.hint,
+                code: error.code
+            } : undefined
+        });
+    }
+};
+
 module.exports = {
     getPanelStats,
     getMyProducts,
@@ -652,6 +897,8 @@ module.exports = {
     updateProduct,
     deleteProduct,
     getPendingOffers,
-    getRecentSales
+    getRecentSales,
+    getCiftlikProfil,
+    updateCiftlikProfil
 };
 

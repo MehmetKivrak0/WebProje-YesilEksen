@@ -44,6 +44,29 @@ export interface AktifUrun {
     resimUrl?: string;
 }
 
+// Çiftlik Profil
+export interface CiftlikProfil {
+    ad: string;
+    sahibi: string;
+    telefon: string;
+    email: string;
+    adres: string;
+    alan: string;
+    alanBirim: string;
+    kurulusYili: string;
+    sehir_id?: number | null;
+    sehir_adi?: string;
+    enlem?: string;
+    boylam?: string;
+    yillik_gelir?: string;
+    uretim_kapasitesi?: string;
+    urunTurleri: string[];
+    sertifikalar: string[];
+    dogrulanmis: boolean;
+    aciklama: string;
+    website?: string;
+}
+
 export const ciftciService = {
     /**
      * Çiftçi panel istatistikleri
@@ -114,6 +137,22 @@ export const ciftciService = {
             success: response.data.success,
             products
         };
+    },
+
+    /**
+     * Çiftlik profil bilgilerini getir
+     */
+    getCiftlikProfil: async (): Promise<{ success: boolean; profil: CiftlikProfil }> => {
+        const response = await api.get('/ciftlik/profil');
+        return response.data;
+    },
+
+    /**
+     * Çiftlik profil bilgilerini güncelle
+     */
+    updateCiftlikProfil: async (profil: Partial<CiftlikProfil>): Promise<{ success: boolean; message: string; profil: any }> => {
+        const response = await api.put('/ciftlik/profil', profil);
+        return response.data;
     }
 };
 

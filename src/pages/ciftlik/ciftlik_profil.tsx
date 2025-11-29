@@ -1,43 +1,89 @@
 import CftNavbar from '../../components/cftnavbar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ciftciService, type CiftlikProfil } from '../../services/ciftciService';
 
 function CiftlikProfil() {
   const [isEditing, setIsEditing] = useState(false);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Çiftlik bilgileri - gerçek uygulamada API'den gelecek
-  const [ciftlikBilgileri, setCiftlikBilgileri] = useState({
-    ad: 'Yeşil Vadi Çiftliği',
-    sahibi: 'Mehmet Yılmaz',
-    telefon: '+90 312 123 45 67',
-    email: 'info@yesilvadi.com.tr',
-    adres: 'Kızılcahamam Mah. Tarım Sok. No: 45, Kızılcahamam, Ankara, Türkiye',
-    alan: '150',
+  // Çiftlik bilgileri
+  const [ciftlikBilgileri, setCiftlikBilgileri] = useState<CiftlikProfil>({
+    ad: '',
+    sahibi: '',
+    telefon: '',
+    email: '',
+    adres: '',
+    alan: '',
     alanBirim: 'Dönüm',
-    kurulusYili: '2010',
-    urunTurleri: ['Mısır', 'Buğday', 'Ayçiçeği', 'Sebze'],
-    sertifikalar: [
-      'Organik Tarım Sertifikası',
-      'İyi Tarım Uygulamaları (İTU)',
-      'GlobalGAP Sertifikası'
-    ],
-    dogrulanmis: true,
-    aciklama: 'Yeşil Vadi Çiftliği, 2010 yılından beri organik tarım ve sürdürülebilir tarım uygulamaları ile faaliyet göstermektedir. Çiftliğimizde mısır, buğday, ayçiçeği ve çeşitli sebzeler yetiştirilmektedir. Tüm üretimimiz organik sertifikalıdır ve çevre dostu yöntemler kullanılmaktadır.',
-    foto: null
+    kurulusYili: '',
+    sehir_id: null,
+    sehir_adi: '',
+    enlem: '',
+    boylam: '',
+    yillik_gelir: '',
+    uretim_kapasitesi: '',
+    urunTurleri: [],
+    sertifikalar: [],
+    dogrulanmis: false,
+    aciklama: '',
+    website: ''
   });
 
-  const handleSave = () => {
-    // Gerçek uygulamada API çağrısı yapılacak
-    setIsEditing(false);
-    setFotoPreview(null);
-    // API çağrısı: kaydetme işlemi
-    console.log('Çiftlik bilgileri kaydedildi:', ciftlikBilgileri);
+  // Orijinal verileri sakla (iptal için)
+  const [originalData, setOriginalData] = useState<CiftlikProfil | null>(null);
+
+  // Veri yükleme
+  useEffect(() => {
+    fetchCiftlikProfil();
+  }, []);
+
+  const fetchCiftlikProfil = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await ciftciService.getCiftlikProfil();
+      if (response.success) {
+        setCiftlikBilgileri(response.profil);
+        setOriginalData(response.profil);
+      }
+    } catch (err: any) {
+      console.error('Çiftlik profili yükleme hatası:', err);
+      setError(err.response?.data?.message || 'Profil bilgileri yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      const response = await ciftciService.updateCiftlikProfil(ciftlikBilgileri);
+      if (response.success) {
+        setIsEditing(false);
+        setFotoPreview(null);
+        setOriginalData(ciftlikBilgileri);
+        // Başarı mesajı gösterilebilir
+        alert('Çiftlik profili başarıyla güncellendi');
+      }
+    } catch (err: any) {
+      console.error('Profil güncelleme hatası:', err);
+      setError(err.response?.data?.message || 'Profil güncellenirken bir hata oluştu');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
+    if (originalData) {
+      setCiftlikBilgileri(originalData);
+    }
     setIsEditing(false);
     setFotoPreview(null);
-    // Değişiklikleri geri al (gerçek uygulamada orijinal verileri yükle)
+    setError(null);
   };
 
   const handleChange = (field: string, value: string) => {
@@ -79,6 +125,24 @@ function CiftlikProfil() {
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="bg-background-light dark:bg-background-dark font-display text-content-light dark:text-content-dark min-h-screen flex flex-col">
+        <CftNavbar />
+        <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                <p className="text-subtle-light dark:text-subtle-dark">Yükleniyor...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-content-light dark:text-content-dark min-h-screen flex flex-col">
       <CftNavbar />
@@ -89,6 +153,13 @@ function CiftlikProfil() {
             <h1 className="text-4xl font-bold text-content-light dark:text-content-dark mb-2">Çiftlik Profili</h1>
             <p className="text-lg text-subtle-light dark:text-subtle-dark">Çiftlik bilgilerinizi görüntüleyin ve düzenleyin</p>
           </div>
+
+          {/* Hata Mesajı */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
 
           {/* Profil Kartı */}
           <div className="bg-background-light dark:bg-background-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark mb-6 overflow-hidden">
@@ -142,14 +213,25 @@ function CiftlikProfil() {
                   <div className="flex gap-2">
                     <button 
                       onClick={handleSave}
-                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center gap-2"
+                      disabled={saving}
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span className="material-symbols-outlined text-base">save</span>
-                      Kaydet
+                      {saving ? (
+                        <>
+                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Kaydediliyor...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-base">save</span>
+                          Kaydet
+                        </>
+                      )}
                     </button>
                     <button 
                       onClick={handleCancel}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium flex items-center gap-2"
+                      disabled={saving}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="material-symbols-outlined text-base">close</span>
                       İptal
@@ -243,63 +325,156 @@ function CiftlikProfil() {
                 Çiftlik Detayları
               </h3>
               <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-primary mt-0.5">agriculture</span>
-                  <div className="flex-1">
-                    <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Çiftlik Adı</p>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={ciftlikBilgileri.ad}
-                        onChange={(e) => handleChange('ad', e.target.value)}
-                        className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-                    ) : (
-                      <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.ad}</p>
-                    )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">agriculture</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Çiftlik Adı</p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={ciftlikBilgileri.ad}
+                          onChange={(e) => handleChange('ad', e.target.value)}
+                          className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                        />
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.ad}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-primary mt-0.5">square_foot</span>
-                  <div className="flex-1">
-                    <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Toplam Alan</p>
-                    {isEditing ? (
-                      <div className="flex gap-2">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">location_city</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Şehir</p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={ciftlikBilgileri.sehir_adi || ''}
+                          onChange={(e) => handleChange('sehir_adi', e.target.value)}
+                          placeholder="Şehir adı"
+                          className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                        />
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.sehir_adi || 'Belirtilmemiş'}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">square_foot</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Toplam Alan</p>
+                      {isEditing ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={ciftlikBilgileri.alan}
+                            onChange={(e) => handleChange('alan', e.target.value)}
+                            className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                          />
+                          <select
+                            value={ciftlikBilgileri.alanBirim}
+                            onChange={(e) => handleChange('alanBirim', e.target.value)}
+                            className="px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                          >
+                            <option value="Dönüm">Dönüm</option>
+                            <option value="Hektar">Hektar</option>
+                            <option value="Dekar">Dekar</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.alan} {ciftlikBilgileri.alanBirim}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">calendar_today</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Kuruluş Yılı</p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={ciftlikBilgileri.kurulusYili}
+                          onChange={(e) => handleChange('kurulusYili', e.target.value)}
+                          className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                        />
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.kurulusYili}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">payments</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Yıllık Gelir (₺)</p>
+                      {isEditing ? (
                         <input
                           type="number"
-                          value={ciftlikBilgileri.alan}
-                          onChange={(e) => handleChange('alan', e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                          value={ciftlikBilgileri.yillik_gelir || ''}
+                          onChange={(e) => handleChange('yillik_gelir', e.target.value)}
+                          placeholder="Yıllık gelir"
+                          className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
                         />
-                        <select
-                          value={ciftlikBilgileri.alanBirim}
-                          onChange={(e) => handleChange('alanBirim', e.target.value)}
-                          className="px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
-                        >
-                          <option value="Dönüm">Dönüm</option>
-                          <option value="Hektar">Hektar</option>
-                          <option value="Dekar">Dekar</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.alan} {ciftlikBilgileri.alanBirim}</p>
-                    )}
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">
+                          {ciftlikBilgileri.yillik_gelir ? `${parseFloat(ciftlikBilgileri.yillik_gelir).toLocaleString('tr-TR')} ₺` : 'Belirtilmemiş'}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-primary mt-0.5">calendar_today</span>
-                  <div className="flex-1">
-                    <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Kuruluş Yılı</p>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={ciftlikBilgileri.kurulusYili}
-                        onChange={(e) => handleChange('kurulusYili', e.target.value)}
-                        className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-                    ) : (
-                      <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.kurulusYili}</p>
-                    )}
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">factory</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Üretim Kapasitesi (Ton)</p>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={ciftlikBilgileri.uretim_kapasitesi || ''}
+                          onChange={(e) => handleChange('uretim_kapasitesi', e.target.value)}
+                          placeholder="Üretim kapasitesi"
+                          className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                        />
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">
+                          {ciftlikBilgileri.uretim_kapasitesi ? `${parseFloat(ciftlikBilgileri.uretim_kapasitesi).toLocaleString('tr-TR')} Ton` : 'Belirtilmemiş'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">explore</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Enlem</p>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          step="0.00000001"
+                          value={ciftlikBilgileri.enlem || ''}
+                          onChange={(e) => handleChange('enlem', e.target.value)}
+                          placeholder="Örn: 39.9334"
+                          className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                        />
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.enlem || 'Belirtilmemiş'}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary mt-0.5">explore</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-subtle-light dark:text-subtle-dark mb-0.5">Boylam</p>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          step="0.00000001"
+                          value={ciftlikBilgileri.boylam || ''}
+                          onChange={(e) => handleChange('boylam', e.target.value)}
+                          placeholder="Örn: 32.8597"
+                          className="w-full px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-content-light dark:text-content-dark focus:ring-2 focus:ring-primary focus:border-primary"
+                        />
+                      ) : (
+                        <p className="text-sm text-content-light dark:text-content-dark">{ciftlikBilgileri.boylam || 'Belirtilmemiş'}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -7,7 +7,9 @@ const {
     updateProduct,
     deleteProduct,
     getPendingOffers,
-    getRecentSales
+    getRecentSales,
+    getCiftlikProfil,
+    updateCiftlikProfil
 } = require('../controllers/ciftlikController');
 const { auth } = require('../middleware/auth');
 
@@ -28,6 +30,10 @@ router.get('/urunler', getMyProducts);
 router.post('/urunler', addProduct);
 router.put('/urunler/:id', updateProduct);
 router.delete('/urunler/:id', deleteProduct);
+
+// Çiftlik Profili
+router.get('/profil', getCiftlikProfil);
+router.put('/profil', updateCiftlikProfil);
 
 module.exports = router;
 
