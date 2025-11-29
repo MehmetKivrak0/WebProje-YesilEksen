@@ -1,120 +1,65 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import CftNavbar from '../../components/cftnavbar';
+import { ciftciService, type CiftciPanelStats, type SonSatis, type BekleyenOnay, type AktifUrun } from '../../services/ciftciService';
 
 function CiftciPanel() {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'hafta' | 'ay' | 'yil'>('ay');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Örnek veriler - gerçek uygulamada API'den gelecek
-  const stats = {
-    toplamSatis: 18,
-    bekleyenOnay: 3,
-    aktifUrun: 12,
-    toplamGelir: '32.500',
-  };
+  // State'ler
+  const [stats, setStats] = useState<CiftciPanelStats>({
+    toplamSatis: 0,
+    bekleyenOnay: 0,
+    aktifUrun: 0,
+    toplamGelir: 0,
+  });
+  const [sonSatislar, setSonSatislar] = useState<SonSatis[]>([]);
+  const [bekleyenOnaylar, setBekleyenOnaylar] = useState<BekleyenOnay[]>([]);
+  const [aktifUrunler, setAktifUrunler] = useState<AktifUrun[]>([]);
 
-  const sonSatislar = [
-    {
-      id: 1,
-      urun: 'Mısır Sapı',
-      miktar: '10 Ton',
-      fiyat: '2.800 ₺',
-      tarih: '2 saat önce',
-      durum: 'Tamamlandı',
-      durumClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      alici: 'BioEnerji A.Ş.',
-    },
-    {
-      id: 2,
-      urun: 'Buğday Samanı',
-      miktar: '20 Ton',
-      fiyat: '6.400 ₺',
-      tarih: '1 gün önce',
-      durum: 'Tamamlandı',
-      durumClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      alici: 'Organik Gübre Sanayi',
-    },
-    {
-      id: 3,
-      urun: 'Ayçiçeği Sapı',
-      miktar: '5 Ton',
-      fiyat: '1.900 ₺',
-      tarih: '2 gün önce',
-      durum: 'Kargoda',
-      durumClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      alici: 'Yeşil Yakıtlar Ltd.',
-    },
-    {
-      id: 4,
-      urun: 'Organik Kompost',
-      miktar: '8 Ton',
-      fiyat: '4.400 ₺',
-      tarih: '3 gün önce',
-      durum: 'Hazırlanıyor',
-      durumClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      alici: 'Doğa Tarım Ürünleri',
-    },
-  ];
+  // Veri çekme fonksiyonu
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const bekleyenOnaylar = [
-    {
-      id: 1,
-      urun: 'Hayvansal Gübre',
-      miktar: '15 Ton',
-      teklifFiyat: '6.750 ₺',
-      birimFiyat: '450 ₺ / ton',
-      alici: 'BioEnerji A.Ş.',
-      tarih: '5 saat önce',
-      sure: '2 gün kaldı',
-    },
-    {
-      id: 2,
-      urun: 'Pamuk Atığı',
-      miktar: '12 Ton',
-      teklifFiyat: '5.040 ₺',
-      birimFiyat: '420 ₺ / ton',
-      alici: 'Sönmez Tekstil',
-      tarih: '1 gün önce',
-      sure: '3 gün kaldı',
-    },
-    {
-      id: 3,
-      urun: 'Zeytin Karasuyu',
-      miktar: '5 m³',
-      teklifFiyat: '3.400 ₺',
-      birimFiyat: '680 ₺ / m³',
-      alici: 'Organik Gübre Sanayi',
-      tarih: '2 gün önce',
-      sure: '4 gün kaldı',
-    },
-  ];
+      // Paralel olarak tüm verileri çek
+      const [statsResponse, salesResponse, offersResponse, productsResponse] = await Promise.all([
+        ciftciService.getPanelStats(selectedTimeRange),
+        ciftciService.getRecentSales(),
+        ciftciService.getPendingOffers(),
+        ciftciService.getActiveProducts(),
+      ]);
 
-  const aktifUrunler = [
-    {
-      id: 1,
-      urun: 'Mısır Sapı',
-      miktar: '25 Ton',
-      fiyat: '280 ₺ / ton',
-      durum: 'Aktif',
-      durumClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    },
-    {
-      id: 2,
-      urun: 'Buğday Samanı',
-      miktar: '30 Ton',
-      fiyat: '320 ₺ / ton',
-      durum: 'Aktif',
-      durumClass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    },
-    {
-      id: 3,
-      urun: 'Hayvansal Gübre',
-      miktar: '20 Ton',
-      fiyat: '450 ₺ / ton',
-      durum: 'Onay Bekliyor',
-      durumClass: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    },
-  ];
+      if (statsResponse.success) {
+        setStats(statsResponse.stats);
+      }
+
+      if (salesResponse.success) {
+        setSonSatislar(salesResponse.sales);
+      }
+
+      if (offersResponse.success) {
+        setBekleyenOnaylar(offersResponse.offers);
+      }
+
+      if (productsResponse.success) {
+        setAktifUrunler(productsResponse.products);
+      }
+    } catch (err: any) {
+      console.error('Veri çekme hatası:', err);
+      setError(err.response?.data?.message || 'Veriler yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedTimeRange]);
+
+  // İlk yükleme ve zaman aralığı değiştiğinde veri çek
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const hizliErisim = [
     {
@@ -150,6 +95,51 @@ function CiftciPanel() {
       iconColor: 'text-orange-600 dark:text-orange-400',
     },
   ];
+
+  // Loading durumu
+  if (loading) {
+    return (
+      <div className="bg-background-light dark:bg-background-dark font-display text-content-light dark:text-content-dark min-h-screen flex flex-col">
+        <CftNavbar />
+        <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+          <div className="max-w-7xl mx-auto flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+              <p className="text-subtle-light dark:text-subtle-dark">Veriler yükleniyor...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Error durumu
+  if (error) {
+    return (
+      <div className="bg-background-light dark:bg-background-dark font-display text-content-light dark:text-content-dark min-h-screen flex flex-col">
+        <CftNavbar />
+        <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
+                <div>
+                  <h3 className="font-semibold text-red-800 dark:text-red-200 mb-1">Hata Oluştu</h3>
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              </div>
+              <button
+                onClick={fetchData}
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Tekrar Dene
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-content-light dark:text-content-dark min-h-screen flex flex-col">
@@ -273,7 +263,7 @@ function CiftciPanel() {
                   </div>
                 </div>
                 <p className="text-sm font-medium text-subtle-light dark:text-subtle-dark mb-2">Toplam Gelir</p>
-                <p className="text-3xl font-bold text-content-light dark:text-content-dark mb-1">{stats.toplamGelir} ₺</p>
+                <p className="text-3xl font-bold text-content-light dark:text-content-dark mb-1">{stats.toplamGelir.toLocaleString('tr-TR')} ₺</p>
                 <p className="text-xs text-subtle-light dark:text-subtle-dark">Bu {selectedTimeRange === 'hafta' ? 'hafta' : selectedTimeRange === 'ay' ? 'ay' : 'yıl'}</p>
               </div>
             </div>
@@ -297,44 +287,51 @@ function CiftciPanel() {
                 </Link>
               </div>
               <div className="space-y-3">
-                {sonSatislar.map((satis) => (
-                  <div
-                    key={satis.id}
-                    className="group rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 hover:border-primary/50 dark:hover:border-primary/30 hover:bg-primary/5 dark:hover:bg-primary/10 hover:shadow-md transition-all duration-200"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-primary"></div>
-                          <h3 className="font-semibold text-content-light dark:text-content-dark">{satis.urun}</h3>
-                        </div>
-                        <p className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm">business</span>
-                          {satis.alici}
-                        </p>
-                      </div>
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${satis.durumClass}`}>
-                        {satis.durum}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-border-light/50 dark:border-border-dark/50">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm text-subtle-light dark:text-subtle-dark">scale</span>
-                          <span className="text-sm font-medium text-content-light dark:text-content-dark">{satis.miktar}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm text-primary">payments</span>
-                          <span className="text-sm font-bold text-primary">{satis.fiyat}</span>
-                        </div>
-                      </div>
-                      <span className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">schedule</span>
-                        {satis.tarih}
-                      </span>
-                    </div>
+                {sonSatislar.length === 0 ? (
+                  <div className="text-center py-8 text-subtle-light dark:text-subtle-dark">
+                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">inventory_2</span>
+                    <p>Henüz satış bulunmuyor</p>
                   </div>
-                ))}
+                ) : (
+                  sonSatislar.map((satis) => (
+                    <div
+                      key={satis.id}
+                      className="group rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 hover:border-primary/50 dark:hover:border-primary/30 hover:bg-primary/5 dark:hover:bg-primary/10 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-primary"></div>
+                            <h3 className="font-semibold text-content-light dark:text-content-dark">{satis.urun}</h3>
+                          </div>
+                          <p className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">business</span>
+                            {satis.alici}
+                          </p>
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${satis.durumClass}`}>
+                          {satis.durum}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-border-light/50 dark:border-border-dark/50">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-subtle-light dark:text-subtle-dark">scale</span>
+                            <span className="text-sm font-medium text-content-light dark:text-content-dark">{satis.miktar}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-primary">payments</span>
+                            <span className="text-sm font-bold text-primary">{satis.fiyat}</span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">schedule</span>
+                          {satis.tarih}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -351,51 +348,58 @@ function CiftciPanel() {
                 </span>
               </div>
               <div className="space-y-3">
-                {bekleyenOnaylar.map((onay) => (
-                  <div
-                    key={onay.id}
-                    className="group rounded-lg border border-yellow-200/50 dark:border-yellow-800/30 bg-background-light dark:bg-background-dark p-4 hover:border-yellow-300 dark:hover:border-yellow-700 hover:bg-yellow-50/50 dark:hover:bg-yellow-900/20 hover:shadow-md transition-all duration-200"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
-                          <h3 className="font-semibold text-content-light dark:text-content-dark">{onay.urun}</h3>
-                        </div>
-                        <p className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm">business</span>
-                          {onay.alici}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2.5 pt-3 border-t border-border-light/50 dark:border-border-dark/50">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-subtle-light dark:text-subtle-dark flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">scale</span>
-                          Miktar:
-                        </span>
-                        <span className="font-semibold text-content-light dark:text-content-dark">{onay.miktar}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-subtle-light dark:text-subtle-dark flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">request_quote</span>
-                          Teklif:
-                        </span>
-                        <span className="font-bold text-primary text-base">{onay.teklifFiyat}</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">schedule</span>
-                          {onay.tarih}
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 text-xs font-medium">
-                          <span className="material-symbols-outlined text-xs">timer</span>
-                          {onay.sure}
-                        </span>
-                      </div>
-                    </div>
+                {bekleyenOnaylar.length === 0 ? (
+                  <div className="text-center py-8 text-subtle-light dark:text-subtle-dark">
+                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">check_circle</span>
+                    <p>Bekleyen onay bulunmuyor</p>
                   </div>
-                ))}
+                ) : (
+                  bekleyenOnaylar.map((onay) => (
+                    <div
+                      key={onay.id}
+                      className="group rounded-lg border border-yellow-200/50 dark:border-yellow-800/30 bg-background-light dark:bg-background-dark p-4 hover:border-yellow-300 dark:hover:border-yellow-700 hover:bg-yellow-50/50 dark:hover:bg-yellow-900/20 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
+                            <h3 className="font-semibold text-content-light dark:text-content-dark">{onay.urun}</h3>
+                          </div>
+                          <p className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">business</span>
+                            {onay.alici}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-2.5 pt-3 border-t border-border-light/50 dark:border-border-dark/50">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-subtle-light dark:text-subtle-dark flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">scale</span>
+                            Miktar:
+                          </span>
+                          <span className="font-semibold text-content-light dark:text-content-dark">{onay.miktar}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-subtle-light dark:text-subtle-dark flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">request_quote</span>
+                            Teklif:
+                          </span>
+                          <span className="font-bold text-primary text-base">{onay.teklifFiyat}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-xs text-subtle-light dark:text-subtle-dark flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">schedule</span>
+                            {onay.tarih}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 text-xs font-medium">
+                            <span className="material-symbols-outlined text-xs">timer</span>
+                            {onay.sure}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </section>
@@ -416,39 +420,46 @@ function CiftciPanel() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {aktifUrunler.map((urun) => (
-                <div
-                  key={urun.id}
-                  className="group relative overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-5 hover:border-primary/50 dark:hover:border-primary/30 hover:bg-primary/5 dark:hover:bg-primary/10 hover:shadow-lg transition-all duration-200"
-                >
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 dark:bg-primary/10 rounded-full -mr-10 -mt-10 blur-xl group-hover:bg-primary/10 dark:group-hover:bg-primary/20 transition-colors"></div>
-                  <div className="relative">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-lg text-primary">inventory_2</span>
+              {aktifUrunler.length === 0 ? (
+                <div className="col-span-3 text-center py-8 text-subtle-light dark:text-subtle-dark">
+                  <span className="material-symbols-outlined text-4xl mb-2 opacity-50">inventory_2</span>
+                  <p>Henüz aktif ürün bulunmuyor</p>
+                </div>
+              ) : (
+                aktifUrunler.map((urun) => (
+                  <div
+                    key={urun.id}
+                    className="group relative overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-5 hover:border-primary/50 dark:hover:border-primary/30 hover:bg-primary/5 dark:hover:bg-primary/10 hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 dark:bg-primary/10 rounded-full -mr-10 -mt-10 blur-xl group-hover:bg-primary/10 dark:group-hover:bg-primary/20 transition-colors"></div>
+                    <div className="relative">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                              <span className="material-symbols-outlined text-lg text-primary">inventory_2</span>
+                            </div>
+                            <h3 className="font-semibold text-content-light dark:text-content-dark">{urun.urun}</h3>
                           </div>
-                          <h3 className="font-semibold text-content-light dark:text-content-dark">{urun.urun}</h3>
+                          <p className="text-sm text-subtle-light dark:text-subtle-dark flex items-center gap-1.5 ml-12">
+                            <span className="material-symbols-outlined text-xs">scale</span>
+                            {urun.miktar}
+                          </p>
                         </div>
-                        <p className="text-sm text-subtle-light dark:text-subtle-dark flex items-center gap-1.5 ml-12">
-                          <span className="material-symbols-outlined text-xs">scale</span>
-                          {urun.miktar}
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${urun.durumClass}`}>
+                          {urun.durum}
+                        </span>
+                      </div>
+                      <div className="pt-3 border-t border-border-light/50 dark:border-border-dark/50">
+                        <p className="text-lg font-bold text-primary flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-base">payments</span>
+                          {urun.fiyat}
                         </p>
                       </div>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${urun.durumClass}`}>
-                        {urun.durum}
-                      </span>
-                    </div>
-                    <div className="pt-3 border-t border-border-light/50 dark:border-border-dark/50">
-                      <p className="text-lg font-bold text-primary flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-base">payments</span>
-                        {urun.fiyat}
-                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </section>
 
