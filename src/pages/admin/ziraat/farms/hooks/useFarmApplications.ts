@@ -96,6 +96,15 @@ export function useFarmApplications() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const [missingDocumentsModal, setMissingDocumentsModal] = useState<{
+    isOpen: boolean;
+    application: FarmApplication | null;
+    missingDocuments: any[];
+  }>({
+    isOpen: false,
+    application: null,
+    missingDocuments: [],
+  });
 
   // Verileri yükle
   useEffect(() => {
@@ -221,8 +230,20 @@ export function useFarmApplications() {
       console.log('📥 [ONAY] API yanıtı:', {
         success: response.success,
         message: response.message,
-        ciftlikId: response.ciftlikId || 'N/A'
+        ciftlikId: response.ciftlikId || 'N/A',
+        hasMissingDocuments: response.hasMissingDocuments
       });
+
+      // Eksik belgeler varsa modal aç
+      if (response.hasMissingDocuments && response.missingDocuments) {
+        setMissingDocumentsModal({
+          isOpen: true,
+          application: application,
+          missingDocuments: response.missingDocuments,
+        });
+        setApprovingId(null);
+        return;
+      }
 
       if (response.success) {
         // Başarılı mesajı göster
@@ -358,6 +379,8 @@ export function useFarmApplications() {
     rejectingId,
     toast,
     setToast,
+    missingDocumentsModal,
+    setMissingDocumentsModal,
   };
 }
 

@@ -126,6 +126,83 @@ const isValidUUID = (value) => {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed);
 };
 
+// Yardımcı fonksiyon: Çiftlik durumu değiştiğinde kullanıcı durumunu senkronize et
+// Çiftlik durumu 'aktif' olduğunda kullanıcı durumunu da 'aktif' yapar
+const syncKullaniciDurumuFromCiftlik = async (client, ciftlikId, yeniDurum) => {
+    try {
+        // Çiftliğin kullanıcı ID'sini al
+        const ciftlikResult = await client.query(
+            'SELECT kullanici_id FROM ciftlikler WHERE id = $1',
+            [ciftlikId]
+        );
+
+        if (ciftlikResult.rows.length === 0) {
+            console.warn(`⚠️ [SYNC KULLANICI DURUMU] Çiftlik bulunamadı: ${ciftlikId}`);
+            return;
+        }
+
+        const kullaniciId = ciftlikResult.rows[0].kullanici_id;
+
+        // Çiftlik durumu 'aktif' ise kullanıcı durumunu da 'aktif' yap
+        if (yeniDurum === 'aktif') {
+            const updateResult = await client.query(
+                'UPDATE kullanicilar SET durum = $1, guncelleme = NOW() WHERE id = $2 AND durum != $1',
+                ['aktif', kullaniciId]
+            );
+
+            if (updateResult.rowCount > 0) {
+                console.log(`✅ [SYNC KULLANICI DURUMU] Kullanıcı durumu aktif yapıldı:`, {
+                    kullanici_id: kullaniciId,
+                    ciftlik_id: ciftlikId
+                });
+            }
+        }
+        // Not: Çiftlik durumu 'aktif' değilse kullanıcı durumunu değiştirmiyoruz
+        // Çünkü kullanıcının başka aktif çiftlikleri olabilir
+    } catch (error) {
+        // Hata kritik değil, sadece log'la
+        console.error('⚠️ [SYNC KULLANICI DURUMU] Hata:', error.message);
+    }
+};
+
+// Yardımcı fonksiyon: Tüm aktif çiftliklerin kullanıcı durumlarını senkronize et
+// Mevcut veritabanındaki tüm aktif çiftlikler için kullanıcı durumlarını 'aktif' yapar
+const syncAllAktifCiftlikKullanicilari = async (client) => {
+    try {
+        // Tüm aktif çiftliklerin kullanıcı ID'lerini al
+        const result = await client.query(
+            `SELECT DISTINCT kullanici_id 
+             FROM ciftlikler 
+             WHERE durum = 'aktif' AND silinme IS NULL`
+        );
+
+        const kullaniciIds = result.rows.map(row => row.kullanici_id);
+        
+        if (kullaniciIds.length === 0) {
+            console.log('ℹ️ [SYNC ALL] Aktif çiftlik bulunamadı');
+            return { updated: 0, total: 0 };
+        }
+
+        // Bu kullanıcıların durumlarını 'aktif' yap
+        const updateResult = await client.query(
+            `UPDATE kullanicilar 
+             SET durum = 'aktif', guncelleme = NOW() 
+             WHERE id = ANY($1::uuid[]) AND durum != 'aktif'`,
+            [kullaniciIds]
+        );
+
+        console.log(`✅ [SYNC ALL] ${updateResult.rowCount} kullanıcının durumu aktif yapıldı`);
+        
+        return {
+            updated: updateResult.rowCount,
+            total: kullaniciIds.length
+        };
+    } catch (error) {
+        console.error('❌ [SYNC ALL] Hata:', error.message);
+        throw error;
+    }
+};
+
 // Dashboard Stats - GET /api/ziraat/dashboard/stats
 const getDashboardStats = async (req, res) => {
     try {
@@ -691,6 +768,65 @@ const approveFarm = async (req, res) => {
 
         const basvuru = basvuruResult.rows[0];
 
+        // Eksik belge kontrolü - Onaylamadan önce kontrol et
+        const eksikBelgelerResult = await client.query(
+            `SELECT b.id, b.ad, b.durum, b.dosya_yolu, b.guncelleme, b.yuklenme,
+                    bt.ad as belge_turu_adi, bt.kod as belge_turu_kod
+             FROM belgeler b
+             JOIN belge_turleri bt ON b.belge_turu_id = bt.id
+             WHERE b.basvuru_id = $1::uuid 
+               AND b.basvuru_tipi = 'ciftlik_basvurusu'
+               AND b.durum = 'Eksik'`,
+            [id]
+        );
+
+        const eksikBelgeler = eksikBelgelerResult.rows;
+
+        // Eğer eksik belgeler varsa, belgeleri döndür ve onaylama yapma
+        if (eksikBelgeler.length > 0) {
+            await client.query('ROLLBACK');
+            
+            // Belgelerin URL'lerini oluştur
+            const baseUrl = `${req.protocol}://${req.get('host')}`;
+            const belgelerWithUrls = eksikBelgeler.map(belge => {
+                // Dosya yolunu normalize et
+                let documentUrl = null;
+                if (belge.dosya_yolu) {
+                    // Eğer dosya_yolu zaten tam URL ise kullan, değilse oluştur
+                    if (belge.dosya_yolu.startsWith('http://') || belge.dosya_yolu.startsWith('https://')) {
+                        documentUrl = belge.dosya_yolu;
+                    } else {
+                        // Relative path ise /api/documents/file/ ile birleştir
+                        const normalizedPath = belge.dosya_yolu.startsWith('/') 
+                            ? belge.dosya_yolu.substring(1) 
+                            : belge.dosya_yolu;
+                        documentUrl = `${baseUrl}/api/documents/file/${encodeURIComponent(normalizedPath)}`;
+                    }
+                }
+
+                return {
+                    id: belge.id,
+                    name: belge.ad,
+                    belgeTuruAdi: belge.belge_turu_adi,
+                    belgeTuruKod: belge.belge_turu_kod,
+                    durum: belge.durum,
+                    url: documentUrl,
+                    yuklenmeTarihi: belge.yuklenme ? belge.yuklenme.toISOString() : null,
+                    guncellemeTarihi: belge.guncelleme ? belge.guncelleme.toISOString() : null,
+                    // Çiftçi yeni belge yükledi mi kontrol et (guncelleme > yuklenme)
+                    yeniBelgeYuklendi: belge.guncelleme && belge.yuklenme && 
+                                       new Date(belge.guncelleme) > new Date(belge.yuklenme)
+                };
+            });
+
+            return res.status(400).json({
+                success: false,
+                hasMissingDocuments: true,
+                message: 'Bu başvuruda eksik belgeler bulunmaktadır. Lütfen çiftçi tarafından yüklenen belgeleri kontrol edin.',
+                missingDocuments: belgelerWithUrls
+            });
+        }
+
         // Eğer başvuru zaten onaylanmışsa ve ciftlik_id varsa, mevcut çiftliği aktif yap
         if (basvuru.ciftlik_id && basvuru.durum === 'onaylandi') {
             const eskiDurumResult = await client.query(
@@ -704,11 +840,8 @@ const approveFarm = async (req, res) => {
                 ['aktif', basvuru.ciftlik_id]
             );
 
-            // Kullanıcının durumunu aktif yap
-            await client.query(
-                'UPDATE kullanicilar SET durum = $1, guncelleme = NOW() WHERE id = $2',
-                ['aktif', basvuru.kullanici_id]
-            );
+            // Kullanıcının durumunu aktif yap (yardımcı fonksiyon ile)
+            await syncKullaniciDurumuFromCiftlik(client, basvuru.ciftlik_id, 'aktif');
 
             await client.query('COMMIT');
             return res.json({
@@ -793,15 +926,13 @@ const approveFarm = async (req, res) => {
             onay_tarihi: updateResult.rows[0].onay_tarihi
         });
 
-        // Çiftlik onaylandıktan sonra kullanıcının durumunu aktif yap
-        await client.query(
-            'UPDATE kullanicilar SET durum = $1, guncelleme = NOW() WHERE id = $2',
-            ['aktif', basvuru.kullanici_id]
-        );
+        // Çiftlik onaylandıktan sonra kullanıcının durumunu aktif yap (yardımcı fonksiyon ile)
+        await syncKullaniciDurumuFromCiftlik(client, ciftlikId, 'aktif');
 
         console.log(`✅ [CIFTLIK ONAY] Kullanıcı durumu aktif yapıldı:`, {
             kullanici_id: basvuru.kullanici_id,
-            eposta: basvuru.eposta
+            eposta: basvuru.eposta,
+            ciftlik_id: ciftlikId
         });
 
         // Belgeleri ciftlik_id ile de bağla (onaylandıktan sonra)
@@ -2213,6 +2344,39 @@ const updateFarmApplicationStatus = async (req, res) => {
     }
 };
 
+// Sync All Active Farm Users - POST /api/ziraat/farms/sync-users
+// Tüm aktif çiftliklerin kullanıcı durumlarını senkronize et
+// Mevcut veritabanındaki tüm aktif çiftlikler için kullanıcı durumlarını 'aktif' yapar
+const syncAllActiveFarmUsers = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const result = await syncAllAktifCiftlikKullanicilari(client);
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: `Senkronizasyon tamamlandı. ${result.updated} kullanıcının durumu aktif yapıldı.`,
+            stats: {
+                updated: result.updated,
+                total: result.total
+            }
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ [SYNC ALL] Senkronizasyon hatası:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Senkronizasyon başarısız oldu',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getProductApplications,
@@ -2229,5 +2393,6 @@ module.exports = {
     getFarmLogs,
     getAllFarmLogs,
     updateDocumentStatus,
-    updateFarmApplicationStatus
+    updateFarmApplicationStatus,
+    syncAllActiveFarmUsers
 };

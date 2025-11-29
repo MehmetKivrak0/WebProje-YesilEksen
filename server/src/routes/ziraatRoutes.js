@@ -16,7 +16,9 @@ const {
     getActivityLog,
     getFarmLogs,
     getAllFarmLogs,
-    updateDocumentStatus
+    updateDocumentStatus,
+    updateFarmApplicationStatus,
+    syncAllActiveFarmUsers
 } = require('../controllers/ziraatController');
 const { auth, checkRole } = require('../middleware/auth');
 router.use(auth);
@@ -38,6 +40,8 @@ router.get('/farmers/:id', getFarmerDetails);
 router.get('/dashboard/products', getDashboardProducts);
 router.get('/activity-log', getActivityLog);
 router.put('/documents/:belgeId', updateDocumentStatus);
+router.put('/farms/status/:id', updateFarmApplicationStatus);
+router.post('/farms/sync-users', syncAllActiveFarmUsers);
 
 module.exports = router;
 

@@ -18,16 +18,25 @@ export interface DashboardStats {
     totalProducts: number;
 }
 
+export interface MissingDocument {
+    id: string;
+    name: string;
+    belgeTuruAdi: string;
+    belgeTuruKod: string;
+    durum: string;
+    url: string | null;
+    yuklenmeTarihi: string | null;
+    guncellemeTarihi: string | null;
+    yeniBelgeYuklendi: boolean;
+}
+
 export interface ApproveFarmResponse {
     success: boolean;
     message: string;
     status?: string;
     ciftlikId?: string;
-    missingDocuments?: Array<{
-        ad: string;
-        durum: string;
-        zorunlu?: boolean;
-    }>;
+    hasMissingDocuments?: boolean;
+    missingDocuments?: MissingDocument[];
 }
 
 export interface ProductApplication {

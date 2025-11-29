@@ -7,6 +7,7 @@ import InspectModal from './components/modals/InspectModal';
 import RejectModal from './components/modals/RejectModal';
 import FarmLogModal from './components/modals/FarmLogModal';
 import BelgeEksikModal from './components/modals/BelgeEksikModal';
+import MissingDocumentsApprovalModal from './components/modals/MissingDocumentsApprovalModal';
 import FarmToast from './components/FarmToast';
 import { useFarmApplications } from './hooks/useFarmApplications';
 import type { FarmApplication } from './types';
@@ -41,6 +42,8 @@ function FarmApplicationsPage() {
     rejectingId,
     toast,
     setToast,
+    missingDocumentsModal,
+    setMissingDocumentsModal,
   } = useFarmApplications();
 
   const handleRejectSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -147,6 +150,25 @@ function FarmApplicationsPage() {
             await loadApplications();
           }}
           onSuccess={async () => {
+            await loadStats();
+            await loadApplications();
+          }}
+        />
+      )}
+
+      {missingDocumentsModal.isOpen && (
+        <MissingDocumentsApprovalModal
+          isOpen={missingDocumentsModal.isOpen}
+          application={missingDocumentsModal.application}
+          missingDocuments={missingDocumentsModal.missingDocuments}
+          onClose={() => {
+            setMissingDocumentsModal({
+              isOpen: false,
+              application: null,
+              missingDocuments: [],
+            });
+          }}
+          onApproved={async () => {
             await loadStats();
             await loadApplications();
           }}

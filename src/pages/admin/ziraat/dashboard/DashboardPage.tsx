@@ -26,6 +26,8 @@ function DashboardPage() {
   const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
   const [selectedFarmerId, setSelectedFarmerId] = useState<string | null>(null);
   const [isFarmerModalOpen, setIsFarmerModalOpen] = useState(false);
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+  const [bildirimler, setBildirimler] = useState<any[]>([]);
   const {
     activityFilter,
     setActivityFilter,
@@ -256,6 +258,103 @@ function DashboardPage() {
               <p className="text-lg text-subtle-light dark:text-subtle-dark">
                 Çiftçileri ve çiftlik faaliyetlerini yönetin
               </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div
+                className="relative"
+                onMouseEnter={() => setIsNotificationMenuOpen(true)}
+                onMouseLeave={() => setIsNotificationMenuOpen(false)}
+              >
+                <button 
+                  className="p-2 rounded-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors relative"
+                  type="button"
+                  onClick={() => setIsNotificationMenuOpen((prev) => !prev)}
+                >
+                  <span className="material-symbols-outlined text-content-light dark:text-content-dark">notifications</span>
+                  {bildirimler.filter(b => !b.okundu).length > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+                  )}
+                </button>
+                {isNotificationMenuOpen && (
+                  <div 
+                    className="absolute right-0 top-full pt-1 z-[100] w-80"
+                    onMouseEnter={() => setIsNotificationMenuOpen(true)}
+                    onMouseLeave={() => setIsNotificationMenuOpen(false)}
+                  >
+                    <div className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark shadow-lg pointer-events-auto max-h-96 overflow-y-auto">
+                      <div className="px-4 py-3 border-b border-border-light dark:border-border-dark sticky top-0 bg-background-light dark:bg-background-dark">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-content-light dark:text-content-dark">Bildirimler</h3>
+                          {bildirimler.filter(b => !b.okundu).length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-primary/20 dark:bg-primary/30 text-primary text-xs font-medium">
+                              {bildirimler.filter(b => !b.okundu).length} yeni
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="py-2">
+                        {bildirimler.length > 0 ? (
+                          bildirimler.map((bildirim) => (
+                            <div
+                              key={bildirim.id}
+                              className={`px-4 py-3 hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors border-b border-border-light/50 dark:border-border-dark/50 ${
+                                !bildirim.okundu ? 'bg-primary/5 dark:bg-primary/10' : ''
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                                  !bildirim.okundu ? 'bg-primary' : 'bg-transparent'
+                                }`}></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-content-light dark:text-content-dark mb-0.5">
+                                    {bildirim.baslik}
+                                  </p>
+                                  <p className="text-xs text-subtle-light dark:text-subtle-dark line-clamp-2">
+                                    {bildirim.mesaj}
+                                  </p>
+                                  <p className="text-xs text-subtle-light dark:text-subtle-dark mt-1">
+                                    {bildirim.tarih}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setBildirimler(prev => prev.filter(b => b.id !== bildirim.id));
+                                  }}
+                                  className="p-1 hover:bg-primary/10 dark:hover:bg-primary/20 rounded transition-colors flex-shrink-0"
+                                  type="button"
+                                  title="Sil"
+                                >
+                                  <span className="material-symbols-outlined text-subtle-light dark:text-subtle-dark text-base">close</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-8 text-center">
+                            <span className="material-symbols-outlined text-subtle-light dark:text-subtle-dark text-4xl mb-2 block">notifications_none</span>
+                            <p className="text-sm text-subtle-light dark:text-subtle-dark">Bildirim yok</p>
+                          </div>
+                        )}
+                      </div>
+                      {bildirimler.length > 0 && (
+                        <div className="px-4 py-3 border-t border-border-light dark:border-border-dark">
+                          <button
+                            onClick={() => {
+                              setBildirimler([]);
+                              setIsNotificationMenuOpen(false);
+                            }}
+                            className="w-full text-sm text-primary hover:text-primary/80 transition-colors"
+                            type="button"
+                          >
+                            Tümünü Temizle
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
